@@ -17,6 +17,7 @@ export {
   darkTheme,
   lightTheme,
   plan9Theme,
+  palenightTheme,
   builtinThemes,
   builtinThemeList,
   getBuiltinTheme,
