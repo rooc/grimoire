@@ -47,6 +47,14 @@ export function getTrackMetadata(event: NostrEvent): TrackMetadata {
   });
 }
 
+const TrackHashtagsSymbol = Symbol("trackHashtags");
+
+export function getTrackHashtags(event: NostrEvent): string[] {
+  return getOrComputeCachedValue(event, TrackHashtagsSymbol, () => {
+    return event.tags.filter((t) => t[0] === "t" && t[1]).map((t) => t[1]);
+  });
+}
+
 // Playlist helpers
 
 export function getPlaylistTitle(event: NostrEvent): string | undefined {

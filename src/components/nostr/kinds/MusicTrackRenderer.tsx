@@ -5,6 +5,7 @@ import {
   getTrackArtist,
   getTrackImage,
   getTrackMetadata,
+  getTrackHashtags,
 } from "@/lib/music-helpers";
 import { BaseEventContainer, ClickableEventTitle } from "./BaseEventRenderer";
 import type { BaseEventProps } from "./BaseEventRenderer";
@@ -18,6 +19,7 @@ export function MusicTrackRenderer({ event }: BaseEventProps) {
   const artist = getTrackArtist(event);
   const trackUrl = getTrackUrl(event);
   const metadata = getTrackMetadata(event);
+  const hashtags = getTrackHashtags(event);
 
   return (
     <BaseEventContainer event={event}>
@@ -31,23 +33,29 @@ export function MusicTrackRenderer({ event }: BaseEventProps) {
           {title || "Untitled Track"}
         </ClickableEventTitle>
 
-        {/* Artist & Album */}
-        <div className="text-sm text-muted-foreground">
-          {artist && <span>{artist}</span>}
-          {artist && metadata.album && <span> &middot; </span>}
-          {metadata.album && <span>{metadata.album}</span>}
-        </div>
+        {/* Artist */}
+        {artist && (
+          <div className="text-sm text-muted-foreground">{artist}</div>
+        )}
 
-        {/* Labels */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {metadata.language && <Label size="sm">{metadata.language}</Label>}
-          {metadata.aiGenerated && (
-            <Label size="sm">
-              <Bot className="size-3 inline mr-0.5" />
-              AI
-            </Label>
-          )}
-        </div>
+        {/* Tags */}
+        {(hashtags.length > 0 || metadata.aiGenerated) && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {hashtags.map((tag) => (
+              <Label key={tag} size="sm">
+                {tag}
+              </Label>
+            ))}
+            {metadata.aiGenerated && (
+              <Label size="sm">
+                <span className="inline-flex items-center gap-1">
+                  <Bot className="size-3" />
+                  ai
+                </span>
+              </Label>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Audio player */}
@@ -103,8 +111,10 @@ export function MusicTrackDetailRenderer({ event }: { event: NostrEvent }) {
           {metadata.language && <Label size="sm">{metadata.language}</Label>}
           {metadata.aiGenerated && (
             <Label size="sm">
-              <Bot className="size-3 inline mr-0.5" />
-              AI Generated
+              <span className="inline-flex items-center gap-1">
+                <Bot className="size-3" />
+                ai generated
+              </span>
             </Label>
           )}
           {metadata.license && <Label size="sm">{metadata.license}</Label>}
