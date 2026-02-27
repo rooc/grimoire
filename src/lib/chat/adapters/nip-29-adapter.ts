@@ -1104,8 +1104,10 @@ export class Nip29Adapter extends ChatProtocolAdapter {
 
       let content = "";
       if (event.kind === 9000) {
-        // put-user: admin adds someone (show as joined)
-        content = "joined";
+        // put-user: admin adds someone
+        // If p-tag has a role (3rd element), show "is now <role>" instead of "joined"
+        const role = pTags[0]?.[2];
+        content = role ? `is now ${role}` : "joined";
       } else if (event.kind === 9001) {
         // remove-user: admin removes someone
         content = "left";
