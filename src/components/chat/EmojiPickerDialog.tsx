@@ -66,7 +66,7 @@ export function EmojiPickerDialog({
   useEffect(() => {
     if (contextEmojis.length > 0) {
       for (const emoji of contextEmojis) {
-        service.addEmoji(emoji.shortcode, emoji.url, "context");
+        service.addEmoji(emoji.shortcode, emoji.url, "context", emoji.address);
       }
     }
   }, [contextEmojis, service]);
@@ -143,6 +143,7 @@ export function EmojiPickerDialog({
       onEmojiSelect(`:${result.shortcode}:`, {
         shortcode: result.shortcode,
         url: result.url,
+        address: result.address,
       });
       updateReactionHistory(`:${result.shortcode}:`);
     }

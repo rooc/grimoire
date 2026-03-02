@@ -41,7 +41,7 @@ import { cn } from "@/lib/utils";
 import { isAddressableKind } from "@/lib/nostr-kinds";
 import { getSemanticAuthor } from "@/lib/semantic-author";
 import { EventFactory } from "applesauce-core/event-factory";
-import { ReactionBlueprint } from "applesauce-common/blueprints";
+import { ReactionBlueprint } from "@/lib/blueprints";
 import { publishEventToRelays } from "@/services/hub";
 import { selectRelaysForInteraction } from "@/services/relay-selection";
 import type { EmojiTag } from "@/lib/emoji-helpers";
@@ -548,7 +548,11 @@ export function BaseEventContainer({
       factory.setSigner(signer);
 
       const emojiArg = customEmoji
-        ? { shortcode: customEmoji.shortcode, url: customEmoji.url }
+        ? {
+            shortcode: customEmoji.shortcode,
+            url: customEmoji.url,
+            address: customEmoji.address,
+          }
         : emoji;
 
       const draft = await factory.create(ReactionBlueprint, event, emojiArg);

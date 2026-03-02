@@ -7,6 +7,8 @@ export interface EmojiSearchResult {
   url: string;
   /** Source of the emoji: "unicode", "user", "set:<identifier>", or "context" */
   source: string;
+  /** NIP-30 optional 4th tag: "30030:pubkey:identifier" address of the emoji set */
+  address?: string;
 }
 
 export class EmojiSearchService {
@@ -29,6 +31,7 @@ export class EmojiSearchService {
     shortcode: string,
     url: string,
     source: string = "custom",
+    address?: string,
   ): Promise<void> {
     // Normalize shortcode (lowercase, no colons)
     const normalized = shortcode.toLowerCase().replace(/^:|:$/g, "");
@@ -43,6 +46,7 @@ export class EmojiSearchService {
       shortcode: normalized,
       url,
       source,
+      address,
     };
 
     this.emojis.set(normalized, emoji);
@@ -57,10 +61,16 @@ export class EmojiSearchService {
 
     const identifier =
       event.tags.find((t) => t[0] === "d")?.[1] || "unnamed-set";
+    const address = `30030:${event.pubkey}:${identifier}`;
     const emojis = getEmojiTags(event);
 
     for (const emoji of emojis) {
-      await this.addEmoji(emoji.shortcode, emoji.url, `set:${identifier}`);
+      await this.addEmoji(
+        emoji.shortcode,
+        emoji.url,
+        `set:${identifier}`,
+        address,
+      );
     }
   }
 

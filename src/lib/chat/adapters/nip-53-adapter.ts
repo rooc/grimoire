@@ -23,6 +23,7 @@ import type {
   ParticipantRole,
 } from "@/types/chat";
 import type { NostrEvent } from "@/types/nostr";
+import type { EmojiTag } from "@/lib/emoji-helpers";
 import eventStore from "@/services/event-store";
 import pool from "@/services/relay-pool";
 import { publishEventToRelays } from "@/services/hub";
@@ -42,7 +43,7 @@ import {
   isValidZap,
 } from "applesauce-common/helpers/zap";
 import { EventFactory } from "applesauce-core/event-factory";
-import { ReactionBlueprint } from "applesauce-common/blueprints";
+import { ReactionBlueprint } from "@/lib/blueprints";
 
 /**
  * NIP-53 Adapter - Live Activity Chat
@@ -466,7 +467,11 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     // Add NIP-30 emoji tags
     if (options?.emojiTags) {
       for (const emoji of options.emojiTags) {
-        tags.push(["emoji", emoji.shortcode, emoji.url]);
+        tags.push(
+          emoji.address
+            ? ["emoji", emoji.shortcode, emoji.url, emoji.address]
+            : ["emoji", emoji.shortcode, emoji.url],
+        );
       }
     }
 
@@ -496,7 +501,7 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     conversation: Conversation,
     messageId: string,
     emoji: string,
-    customEmoji?: { shortcode: string; url: string },
+    customEmoji?: EmojiTag,
   ): Promise<void> {
     const activePubkey = accountManager.active$.value?.pubkey;
     const activeSigner = accountManager.active$.value?.signer;
@@ -545,9 +550,7 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     factory.setSigner(activeSigner);
 
     // Use ReactionBlueprint - auto-handles e-tag, k-tag, p-tag, custom emoji
-    const emojiArg = customEmoji
-      ? { shortcode: customEmoji.shortcode, url: customEmoji.url }
-      : emoji;
+    const emojiArg = customEmoji ?? emoji;
 
     const draft = await factory.create(
       ReactionBlueprint,

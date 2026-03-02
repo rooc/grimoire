@@ -35,7 +35,7 @@ import { Kind1Renderer } from "./nostr/kinds";
 import pool from "@/services/relay-pool";
 import eventStore from "@/services/event-store";
 import { EventFactory } from "applesauce-core/event-factory";
-import { NoteBlueprint } from "applesauce-common/blueprints";
+import { NoteBlueprint } from "@/lib/blueprints";
 import { useGrimoire } from "@/core/state";
 import { AGGREGATOR_RELAYS } from "@/services/loaders";
 import { normalizeRelayURL } from "@/lib/relay-url";
@@ -354,6 +354,7 @@ export function PostViewer({ windowId }: PostViewerProps = {}) {
           emojis: emojiTags.map((e) => ({
             shortcode: e.shortcode,
             url: e.url,
+            address: e.address,
           })),
         });
 

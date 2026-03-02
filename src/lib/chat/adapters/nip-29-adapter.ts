@@ -19,6 +19,7 @@ import type {
   ParticipantRole,
 } from "@/types/chat";
 import type { NostrEvent } from "@/types/nostr";
+import type { EmojiTag } from "@/lib/emoji-helpers";
 import type { ChatAction, GetActionsOptions } from "@/types/chat-actions";
 import eventStore from "@/services/event-store";
 import pool from "@/services/relay-pool";
@@ -29,10 +30,7 @@ import { getEventPointerFromETag } from "applesauce-core/helpers/pointers";
 import { mergeRelaySets } from "applesauce-core/helpers";
 import { normalizeRelayURL } from "@/lib/relay-url";
 import { EventFactory } from "applesauce-core/event-factory";
-import {
-  GroupMessageBlueprint,
-  ReactionBlueprint,
-} from "applesauce-common/blueprints";
+import { GroupMessageBlueprint, ReactionBlueprint } from "@/lib/blueprints";
 import { resolveGroupMetadata } from "@/lib/chat/group-metadata-helpers";
 
 /**
@@ -465,6 +463,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
         emojis: options?.emojiTags?.map((e) => ({
           shortcode: e.shortcode,
           url: e.url,
+          address: e.address,
         })),
       },
     );
@@ -508,7 +507,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     conversation: Conversation,
     messageId: string,
     emoji: string,
-    customEmoji?: { shortcode: string; url: string },
+    customEmoji?: EmojiTag,
   ): Promise<void> {
     const activePubkey = accountManager.active$.value?.pubkey;
     const activeSigner = accountManager.active$.value?.signer;
@@ -538,9 +537,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     factory.setSigner(activeSigner);
 
     // Use ReactionBlueprint - auto-handles e-tag, k-tag, p-tag, custom emoji
-    const emojiArg = customEmoji
-      ? { shortcode: customEmoji.shortcode, url: customEmoji.url }
-      : emoji;
+    const emojiArg = customEmoji ?? emoji;
 
     const draft = await factory.create(
       ReactionBlueprint,

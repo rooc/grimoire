@@ -13,6 +13,8 @@ export const EMOJI_SHORTCODE_REGEX = /^:([a-zA-Z0-9_-]+):$/;
 export interface EmojiTag {
   shortcode: string;
   url: string;
+  /** NIP-30 optional 4th tag: "30030:pubkey:identifier" address of the emoji set */
+  address?: string;
 }
 
 /**

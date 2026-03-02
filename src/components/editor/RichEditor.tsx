@@ -97,6 +97,14 @@ const EmojiMention = Mention.extend({
           return { "data-source": attributes.source };
         },
       },
+      address: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-address"),
+        renderHTML: (attributes) => {
+          if (!attributes.address) return {};
+          return { "data-address": attributes.address };
+        },
+      },
     };
   },
 
@@ -179,11 +187,11 @@ function serializeContent(editor: any): SerializedContent {
   // Walk the document to collect emoji, blob, and address reference data
   editor.state.doc.descendants((node: any) => {
     if (node.type.name === "emoji") {
-      const { id, url, source } = node.attrs;
+      const { id, url, source, address } = node.attrs;
       // Only add custom emojis (not unicode) and avoid duplicates
       if (source !== "unicode" && !seenEmojis.has(id)) {
         seenEmojis.add(id);
-        emojiTags.push({ shortcode: id, url });
+        emojiTags.push({ shortcode: id, url, address: address ?? undefined });
       }
     } else if (node.type.name === "blobAttachment") {
       const { url, sha256, mimeType, size, server } = node.attrs;
@@ -500,6 +508,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
                         label: props.shortcode,
                         url: props.url,
                         source: props.source,
+                        address: props.address ?? null,
                       },
                     },
                     { type: "text", text: " " },

@@ -12,6 +12,8 @@ import { selectZapRelays } from "./zap-relay-selection";
 export interface EmojiTag {
   shortcode: string;
   url: string;
+  /** NIP-30 optional 4th tag: "30030:pubkey:identifier" address of the emoji set */
+  address?: string;
 }
 
 export interface ZapRequestParams {
@@ -124,7 +126,11 @@ export async function createZapRequest(
   // Add NIP-30 emoji tags
   if (params.emojiTags) {
     for (const emoji of params.emojiTags) {
-      tags.push(["emoji", emoji.shortcode, emoji.url]);
+      tags.push(
+        emoji.address
+          ? ["emoji", emoji.shortcode, emoji.url, emoji.address]
+          : ["emoji", emoji.shortcode, emoji.url],
+      );
     }
   }
 

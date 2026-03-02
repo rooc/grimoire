@@ -40,6 +40,8 @@ import { FilePasteHandler } from "./extensions/file-paste-handler";
 export interface EmojiTag {
   shortcode: string;
   url: string;
+  /** NIP-30 optional 4th tag: "30030:pubkey:identifier" address of the emoji set */
+  address?: string;
 }
 
 /**
@@ -125,6 +127,14 @@ const EmojiMention = Mention.extend({
         renderHTML: (attributes) => {
           if (!attributes.source) return {};
           return { "data-source": attributes.source };
+        },
+      },
+      address: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-address"),
+        renderHTML: (attributes) => {
+          if (!attributes.address) return {};
+          return { "data-address": attributes.address };
         },
       },
     };
@@ -699,6 +709,7 @@ export const MentionEditor = forwardRef<
                 const shortcode = child.attrs?.id;
                 const url = child.attrs?.url;
                 const source = child.attrs?.source;
+                const address = child.attrs?.address;
 
                 if (source === "unicode" && url) {
                   // Unicode emoji - output the actual character
@@ -709,7 +720,11 @@ export const MentionEditor = forwardRef<
 
                   if (url && !seenEmojis.has(shortcode)) {
                     seenEmojis.add(shortcode);
-                    emojiTags.push({ shortcode, url });
+                    emojiTags.push({
+                      shortcode,
+                      url,
+                      address: address ?? undefined,
+                    });
                   }
                 }
               } else if (child.type === "blobAttachment") {
@@ -893,6 +908,7 @@ export const MentionEditor = forwardRef<
                         label: props.shortcode,
                         url: props.url,
                         source: props.source,
+                        address: props.address ?? null,
                       },
                     },
                     { type: "text", text: " " },
