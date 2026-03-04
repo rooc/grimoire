@@ -1,11 +1,7 @@
 import accountManager from "@/services/accounts";
-import pool from "@/services/relay-pool";
+import publishService from "@/services/publish-service";
+import { selectRelaysForPublish } from "@/services/relay-selection";
 import { EventFactory } from "applesauce-core/event-factory";
-import { relayListCache } from "@/services/relay-list-cache";
-import { AGGREGATOR_RELAYS } from "@/services/loaders";
-import { mergeRelaySets } from "applesauce-core/helpers";
-import { grimoireStateAtom } from "@/core/state";
-import { getDefaultStore } from "jotai";
 import { NostrEvent } from "@/types/nostr";
 import { settingsManager } from "@/services/settings";
 import { GRIMOIRE_CLIENT_TAG } from "@/constants/app";
@@ -37,24 +33,15 @@ export class DeleteEventAction {
 
     const event = await factory.sign(draft);
 
-    // Get write relays from cache and state
-    const authorWriteRelays =
-      (await relayListCache.getOutboxRelays(account.pubkey)) || [];
+    // Select relays and publish
+    const relays = await selectRelaysForPublish(account.pubkey);
+    const result = await publishService.publish(event, relays);
 
-    const store = getDefaultStore();
-    const state = store.get(grimoireStateAtom);
-    const stateWriteRelays =
-      state.activeAccount?.relays?.filter((r) => r.write).map((r) => r.url) ||
-      [];
-
-    // Combine all relay sources
-    const writeRelays = mergeRelaySets(
-      authorWriteRelays,
-      stateWriteRelays,
-      AGGREGATOR_RELAYS,
-    );
-
-    // Publish to all target relays
-    await pool.publish(writeRelays, event);
+    if (!result.ok) {
+      const errors = result.failed
+        .map((f) => `${f.relay}: ${f.error}`)
+        .join(", ");
+      throw new Error(`Failed to publish deletion event. Errors: ${errors}`);
+    }
   }
 }
