@@ -16,8 +16,8 @@ export interface RelayInformation {
   /** Administrative contact for the relay */
   contact?: string;
 
-  /** List of NIPs supported by this relay */
-  supported_nips?: number[];
+  /** List of NIPs supported by this relay (normalized to strings) */
+  supported_nips?: string[];
 
   /** Software version running the relay */
   software?: string;

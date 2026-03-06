@@ -29,7 +29,14 @@ export async function fetchRelayInfo(
 
     if (!response.ok) return null;
 
-    return (await response.json()) as RelayInformation;
+    const info = (await response.json()) as RelayInformation;
+
+    // Normalize supported_nips to strings (relays may return numbers, strings, or mixed)
+    if (info.supported_nips) {
+      info.supported_nips = info.supported_nips.map(String);
+    }
+
+    return info;
   } catch (error) {
     console.warn(`NIP-11: Failed to fetch ${wsUrl}:`, error);
     return null;
@@ -140,7 +147,7 @@ export async function relaySupportsNip(
   try {
     const normalizedUrl = normalizeRelayURL(wsUrl);
     const info = await getRelayInfo(normalizedUrl);
-    return info?.supported_nips?.includes(nipNumber) ?? false;
+    return info?.supported_nips?.includes(String(nipNumber)) ?? false;
   } catch (error) {
     console.warn(`NIP-11: Failed to check NIP support for ${wsUrl}:`, error);
     return false;

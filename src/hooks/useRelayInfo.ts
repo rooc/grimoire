@@ -61,5 +61,5 @@ export function useRelaySupportsNip(
   const info = useRelayInfo(wsUrl);
 
   if (!info) return undefined;
-  return info.supported_nips?.includes(nipNumber) ?? false;
+  return info.supported_nips?.includes(String(nipNumber)) ?? false;
 }

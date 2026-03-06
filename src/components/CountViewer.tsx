@@ -64,7 +64,7 @@ async function checkNip45Support(url: string): Promise<boolean | null> {
     const info = await getRelayInfo(url);
     if (!info) return null; // Couldn't fetch relay info
     if (!info.supported_nips) return null; // No NIP support info available
-    return info.supported_nips.includes(45);
+    return info.supported_nips.includes("45");
   } catch {
     return null; // Error fetching info
   }
