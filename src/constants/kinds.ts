@@ -35,6 +35,7 @@ import {
   Highlighter,
   Image,
   Key,
+  Landmark,
   List,
   ListChecks,
   ListFilter,
@@ -180,7 +181,7 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     name: "Thread",
     description: "Thread",
     nip: "7D",
-    icon: MessageSquare,
+    icon: Landmark,
   },
   12: {
     kind: 12,
