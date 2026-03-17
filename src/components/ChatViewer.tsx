@@ -742,6 +742,9 @@ export function ChatViewer({
         toast.error(errorMessage);
       } finally {
         setIsSending(false);
+        // Clear reply context after slash command execution
+        replyToRef.current = undefined;
+        setReplyTo(undefined);
       }
       return;
     }
@@ -754,7 +757,10 @@ export function ChatViewer({
         emojiTags,
         blobAttachments,
       });
-      setReplyTo(undefined); // Clear reply context only on success
+      // Clear reply context immediately (ref + state) so the next send
+      // cannot read a stale value before React re-renders.
+      replyToRef.current = undefined;
+      setReplyTo(undefined);
     } catch (error) {
       console.error("[Chat] Failed to send message:", error);
       const errorMessage =
