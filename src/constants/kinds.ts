@@ -837,13 +837,13 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     nip: "51",
     icon: Mail,
   },
-  // 10051: {
-  //   kind: 10051,
-  //   name: "KeyPackage Relays",
-  //   description: "KeyPackage Relays List",
-  //   nip: "Marmot",
-  //   icon: Key,
-  // },
+  10051: {
+    kind: 10051,
+    name: "KeyPackage Relays",
+    description: "KeyPackage Relays List",
+    nip: "EE",
+    icon: Key,
+  },
   10040: {
     kind: 10040,
     name: "Trusted Providers",
