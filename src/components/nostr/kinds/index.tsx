@@ -34,6 +34,10 @@ import {
 } from "./BlossomServerListRenderer";
 import { Kind10317Renderer } from "./GraspListRenderer";
 import { Kind10317DetailRenderer } from "./GraspListDetailRenderer";
+import {
+  FavoriteSpellsRenderer,
+  FavoriteSpellsDetailRenderer,
+} from "./FavoriteSpellsRenderer";
 import { Kind30023Renderer } from "./ArticleRenderer";
 import { Kind30023DetailRenderer } from "./ArticleDetailRenderer";
 import { CommunityNIPRenderer } from "./CommunityNIPRenderer";
@@ -234,6 +238,7 @@ const kindRenderers: Record<number, React.ComponentType<BaseEventProps>> = {
   10102: WikiRelaysRenderer, // Good Wiki Relays (NIP-51)
   10166: MonitorAnnouncementRenderer, // Relay Monitor Announcement (NIP-66)
   10317: Kind10317Renderer, // User Grasp List (NIP-34)
+  10777: FavoriteSpellsRenderer, // Favorite Spells (Grimoire)
   13534: RelayMembersRenderer, // Relay Members (NIP-43)
   30000: FollowSetRenderer, // Follow Sets (NIP-51)
   30002: GenericRelayListRenderer, // Relay Sets (NIP-51)
@@ -349,6 +354,7 @@ const detailRenderers: Record<
   10102: WikiRelaysDetailRenderer, // Good Wiki Relays Detail (NIP-51)
   10166: MonitorAnnouncementDetailRenderer, // Relay Monitor Announcement Detail (NIP-66)
   10317: Kind10317DetailRenderer, // User Grasp List Detail (NIP-34)
+  10777: FavoriteSpellsDetailRenderer, // Favorite Spells Detail (Grimoire)
   13534: RelayMembersDetailRenderer, // Relay Members Detail (NIP-43)
   30000: FollowSetDetailRenderer, // Follow Sets Detail (NIP-51)
   30003: BookmarkSetDetailRenderer, // Bookmark Sets Detail (NIP-51)

@@ -93,6 +93,7 @@ export interface EventKind {
 }
 
 export const SPELL_KIND = 777;
+export const FAVORITE_SPELLS_KIND = 10777;
 export const SPELLBOOK_KIND = 30777;
 
 export const EVENT_KINDS: Record<number | string, EventKind> = {
@@ -892,6 +893,13 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     description: "User Grasp List",
     nip: "34",
     icon: FolderGit2,
+  },
+  10777: {
+    kind: 10777,
+    name: "Favorite Spells",
+    description: "User's favorite spells list",
+    nip: "",
+    icon: WandSparkles,
   },
   // 10312: {
   //   kind: 10312,

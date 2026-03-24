@@ -9,6 +9,7 @@ import { TabBar } from "../TabBar";
 import CommandLauncher from "../CommandLauncher";
 import { GlobalAuthPrompt } from "../GlobalAuthPrompt";
 import { SpellbookDropdown } from "../SpellbookDropdown";
+import { FavoriteSpellsDropdown } from "../FavoriteSpellsDropdown";
 import UserMenu from "../nostr/user-menu";
 import { AppShellContext } from "./AppShellContext";
 
@@ -74,7 +75,10 @@ export function AppShell({ children, hideBottomBar = false }: AppShellProps) {
             <SpellbookDropdown />
           </div>
 
-          <UserMenu />
+          <div className="flex items-center">
+            <FavoriteSpellsDropdown />
+            <UserMenu />
+          </div>
         </header>
         <section className="flex-1 relative overflow-hidden">
           {children}

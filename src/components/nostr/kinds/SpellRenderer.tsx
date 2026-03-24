@@ -9,12 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { KindBadge } from "@/components/KindBadge";
 import { SpellEvent } from "@/types/spell";
 import { CopyableJsonViewer } from "@/components/JsonViewer";
-import { User, Users } from "lucide-react";
+import { User, Users, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserName } from "../UserName";
 import { useAddWindow, useGrimoire } from "@/core/state";
 import { useProfile } from "@/hooks/useProfile";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
+import { useAccount } from "@/hooks/useAccount";
+import { useFavoriteSpells } from "@/hooks/useFavoriteSpells";
 import { getDisplayName } from "@/lib/nostr-utils";
 
 /**
@@ -149,21 +151,43 @@ function IdentifierList({
  * Displays spell name, description, and the reconstructed command
  */
 export function SpellRenderer({ event }: BaseEventProps) {
+  const { canSign } = useAccount();
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
+  const favorited = isFavorite(event.id);
+
   try {
     const spell = decodeSpell(event as SpellEvent);
 
     return (
       <BaseEventContainer event={event}>
         <div className="flex flex-col gap-2">
-          {/* Title */}
-          {spell.name && (
-            <ClickableEventTitle
-              event={event}
-              className="text-lg font-semibold text-foreground"
-            >
-              {spell.name}
-            </ClickableEventTitle>
-          )}
+          {/* Title + Favorite */}
+          <div className="flex items-center gap-2">
+            {spell.name && (
+              <ClickableEventTitle
+                event={event}
+                className="text-lg font-semibold text-foreground flex-1"
+              >
+                {spell.name}
+              </ClickableEventTitle>
+            )}
+            {canSign && (
+              <button
+                onClick={() => toggleFavorite(event)}
+                disabled={isUpdating}
+                className={cn(
+                  "p-1 transition-colors flex-shrink-0",
+                  favorited
+                    ? "text-yellow-500 hover:text-yellow-600"
+                    : "text-muted-foreground hover:text-yellow-500",
+                  isUpdating && "opacity-50",
+                )}
+                title={favorited ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Star className={cn("size-4", favorited && "fill-current")} />
+              </button>
+            )}
+          </div>
 
           {/* Description */}
           {spell.description && (
@@ -216,6 +240,9 @@ export function SpellRenderer({ event }: BaseEventProps) {
 export function SpellDetailRenderer({ event }: BaseEventProps) {
   const { state } = useGrimoire();
   const activePubkey = state.activeAccount?.pubkey;
+  const { canSign } = useAccount();
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
+  const favorited = isFavorite(event.id);
 
   try {
     const spell = decodeSpell(event as SpellEvent);
@@ -237,14 +264,32 @@ export function SpellDetailRenderer({ event }: BaseEventProps) {
     return (
       <div className="flex flex-col gap-6 p-4">
         <div className="flex flex-col gap-2">
-          {spell.name && (
-            <ClickableEventTitle
-              event={event}
-              className="text-2xl font-bold hover:underline cursor-pointer"
-            >
-              {spell.name}
-            </ClickableEventTitle>
-          )}
+          <div className="flex items-center gap-3">
+            {spell.name && (
+              <ClickableEventTitle
+                event={event}
+                className="text-2xl font-bold hover:underline cursor-pointer flex-1"
+              >
+                {spell.name}
+              </ClickableEventTitle>
+            )}
+            {canSign && (
+              <button
+                onClick={() => toggleFavorite(event)}
+                disabled={isUpdating}
+                className={cn(
+                  "p-1.5 transition-colors flex-shrink-0",
+                  favorited
+                    ? "text-yellow-500 hover:text-yellow-600"
+                    : "text-muted-foreground hover:text-yellow-500",
+                  isUpdating && "opacity-50",
+                )}
+                title={favorited ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Star className={cn("size-5", favorited && "fill-current")} />
+              </button>
+            )}
+          </div>
           {spell.description && (
             <p className="text-muted-foreground">{spell.description}</p>
           )}

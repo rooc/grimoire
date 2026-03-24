@@ -24,6 +24,7 @@ import {
   Zap,
   MessageSquare,
   SmilePlus,
+  Star,
 } from "lucide-react";
 import { useAddWindow, useGrimoire } from "@/core/state";
 import { useCopy } from "@/hooks/useCopy";
@@ -45,6 +46,8 @@ import { ReactionBlueprint } from "@/lib/blueprints";
 import { publishEventToRelays } from "@/services/hub";
 import { selectRelaysForInteraction } from "@/services/relay-selection";
 import type { EmojiTag } from "@/lib/emoji-helpers";
+import { useFavoriteSpells } from "@/hooks/useFavoriteSpells";
+import { SPELL_KIND } from "@/constants/kinds";
 
 /**
  * Universal event properties and utilities shared across all kind renderers
@@ -136,6 +139,9 @@ export function EventMenu({
   const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
+  const isSpell = event.kind === SPELL_KIND;
+  const favorited = isSpell && isFavorite(event.id);
 
   const openEventDetail = () => {
     let pointer;
@@ -264,6 +270,17 @@ export function EventMenu({
             React
           </DropdownMenuItem>
         )}
+        {canSign && isSpell && (
+          <DropdownMenuItem
+            onClick={() => toggleFavorite(event)}
+            disabled={isUpdating}
+          >
+            <Star
+              className={`size-4 mr-2 ${favorited ? "text-yellow-500 fill-current" : ""}`}
+            />
+            {favorited ? "Remove from Favorites" : "Add to Favorites"}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={copyEventId}>
           {copied ? (
@@ -306,6 +323,9 @@ export function EventContextMenu({
   const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
+  const isSpell = event.kind === SPELL_KIND;
+  const favorited = isSpell && isFavorite(event.id);
 
   const openEventDetail = () => {
     let pointer;
@@ -428,6 +448,17 @@ export function EventContextMenu({
           <ContextMenuItem onClick={onReactClick}>
             <SmilePlus className="size-4 mr-2" />
             React
+          </ContextMenuItem>
+        )}
+        {canSign && isSpell && (
+          <ContextMenuItem
+            onClick={() => toggleFavorite(event)}
+            disabled={isUpdating}
+          >
+            <Star
+              className={`size-4 mr-2 ${favorited ? "text-yellow-500 fill-current" : ""}`}
+            />
+            {favorited ? "Remove from Favorites" : "Add to Favorites"}
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />

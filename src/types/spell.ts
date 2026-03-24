@@ -1,8 +1,12 @@
 import type { NostrEvent, NostrFilter } from "./nostr";
 import type { Workspace, WindowInstance } from "./app";
-import { SPELL_KIND, SPELLBOOK_KIND } from "@/constants/kinds";
+import {
+  SPELL_KIND,
+  FAVORITE_SPELLS_KIND,
+  SPELLBOOK_KIND,
+} from "@/constants/kinds";
 
-export { SPELL_KIND, SPELLBOOK_KIND };
+export { SPELL_KIND, FAVORITE_SPELLS_KIND, SPELLBOOK_KIND };
 
 /**
  * Spell event (kind 777 immutable event)
