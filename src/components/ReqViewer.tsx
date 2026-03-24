@@ -88,7 +88,7 @@ import {
 } from "@/lib/req-state-machine";
 import { resolveFilterAliases, getTagValues } from "@/lib/nostr-utils";
 import { chunkFiltersByRelay } from "@/lib/relay-filter-chunking";
-import { useStableValue } from "@/hooks/useStable";
+import { useStableRelayFilterMap } from "@/hooks/useStable";
 
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import { MemoizedCompactEventRow } from "./nostr/CompactEventRow";
@@ -694,17 +694,28 @@ function QueryDropdown({
             <div className="mt-1 pl-1">
               {Object.entries(relayFilterMap).map(
                 ([relayUrl, relayFilters]) => {
-                  const authorCount = relayFilters.reduce(
+                  const reasoning = relayReasoning?.find(
+                    (r) => r.relay === relayUrl,
+                  );
+                  const isFallback = !!reasoning?.isFallback;
+
+                  // Use reasoning counts (assigned users) not raw filter counts
+                  // (which include unassigned users piggybacking on every relay)
+                  const assignedWriters = reasoning?.writers?.length || 0;
+                  const assignedReaders = reasoning?.readers?.length || 0;
+
+                  // Total in chunked filter for unassigned calculation
+                  const totalAuthors = relayFilters.reduce(
                     (sum, f) => sum + (f.authors?.length || 0),
                     0,
                   );
-                  const pTagCount = relayFilters.reduce(
+                  const totalPTags = relayFilters.reduce(
                     (sum, f) => sum + (f["#p"]?.length || 0),
                     0,
                   );
-                  const isFallback = !!relayReasoning?.find(
-                    (r) => r.relay === relayUrl,
-                  )?.isFallback;
+                  const unassignedAuthors = totalAuthors - assignedWriters;
+                  const unassignedPTags = totalPTags - assignedReaders;
+
                   const relayJson = JSON.stringify(
                     relayFilters.length === 1 ? relayFilters[0] : relayFilters,
                     null,
@@ -718,22 +729,42 @@ function QueryDropdown({
                           <RelayLink url={relayUrl} showInboxOutbox={false} />
                         </div>
                         <div className="shrink-0 text-muted-foreground flex items-center gap-1.5 text-[10px]">
-                          {authorCount > 0 && (
+                          {(assignedWriters > 0 ||
+                            (isFallback && totalAuthors > 0)) && (
                             <span
                               className="flex items-center gap-0.5"
-                              title="outbox / write"
+                              title={
+                                isFallback
+                                  ? `${totalAuthors} authors (fallback relay)`
+                                  : `${assignedWriters} assigned outbox writers${unassignedAuthors > 0 ? ` + ${unassignedAuthors} unassigned` : ""} (${totalAuthors} total in REQ)`
+                              }
                             >
                               <Send className="size-2.5" />
-                              {authorCount}
+                              {isFallback ? totalAuthors : assignedWriters}
+                              {!isFallback && unassignedAuthors > 0 && (
+                                <span className="text-muted-foreground/50">
+                                  +{unassignedAuthors}
+                                </span>
+                              )}
                             </span>
                           )}
-                          {pTagCount > 0 && (
+                          {(assignedReaders > 0 ||
+                            (isFallback && totalPTags > 0)) && (
                             <span
                               className="flex items-center gap-0.5"
-                              title="inbox / read"
+                              title={
+                                isFallback
+                                  ? `${totalPTags} mentions (fallback relay)`
+                                  : `${assignedReaders} assigned inbox readers${unassignedPTags > 0 ? ` + ${unassignedPTags} unassigned` : ""} (${totalPTags} total in REQ)`
+                              }
                             >
                               <Inbox className="size-2.5" />
-                              {pTagCount}
+                              {isFallback ? totalPTags : assignedReaders}
+                              {!isFallback && unassignedPTags > 0 && (
+                                <span className="text-muted-foreground/50">
+                                  +{unassignedPTags}
+                                </span>
+                              )}
                             </span>
                           )}
                           {isFallback && (
@@ -850,22 +881,21 @@ export default function ReqViewer({
   // We just display the NIP-05 identifiers for user reference
 
   // NIP-65 outbox relay selection
-  // Memoize fallbackRelays to prevent re-creation on every render
-  const fallbackRelays = useMemo(
-    () =>
-      state.activeAccount?.relays?.filter((r) => r.read).map((r) => r.url) ||
-      AGGREGATOR_RELAYS,
-    [state.activeAccount?.relays],
-  );
+  // Fallback relays for follows without kind:10002 relay lists.
+  // Use AGGREGATOR_RELAYS (popular general relays), NOT the user's personal relays.
+  // The user's relays (both read and write) are specific to their network —
+  // assigning them as outbox for hundreds of unknown follows inflates counts
+  // and sends unnecessary queries to small/niche relays.
+  const fallbackRelays = AGGREGATOR_RELAYS;
 
-  // Memoize outbox options to prevent object re-creation
+  // Stable outbox options (fallbackRelays is a module constant)
   const outboxOptions = useMemo(
     () => ({
       fallbackRelays,
       timeout: 1000,
       maxRelays: 42,
     }),
-    [fallbackRelays],
+    [],
   );
 
   // Select optimal relays based on authors (write relays) and #p tags (read relays)
@@ -916,7 +946,7 @@ export default function ReqViewer({
     return chunkFiltersByRelay(resolvedFilter, reasoning);
   }, [relays, reasoning, resolvedFilter]);
 
-  const stableRelayFilterMap = useStableValue(relayFilterMap);
+  const stableRelayFilterMap = useStableRelayFilterMap(relayFilterMap);
 
   const {
     events,
