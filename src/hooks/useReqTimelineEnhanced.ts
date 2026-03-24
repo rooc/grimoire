@@ -3,10 +3,19 @@ import pool from "@/services/relay-pool";
 import type { NostrEvent, Filter } from "nostr-tools";
 import { useEventStore } from "applesauce-react/hooks";
 import { isNostrEvent } from "@/lib/type-guards";
-import { useStableValue, useStableArray } from "./useStable";
+import {
+  useStableValue,
+  useStableArray,
+  useStableRelayFilterMap,
+} from "./useStable";
 import { useRelayState } from "./useRelayState";
 import type { ReqRelayState, ReqOverallState } from "@/types/req-state";
 import { deriveOverallState } from "@/lib/req-state-machine";
+
+/** Maximum events kept in memory during streaming before eviction */
+const MAX_STREAMING_EVENTS = 2000;
+/** Fraction of events to evict when cap is hit (evict oldest 25%) */
+const EVICTION_FRACTION = 0.25;
 
 interface UseReqTimelineEnhancedOptions {
   limit?: number;
@@ -52,7 +61,7 @@ export function useReqTimelineEnhanced(
 ): UseReqTimelineEnhancedReturn {
   const eventStore = useEventStore();
   const { limit, stream = false, relayFilterMap } = options;
-  const stableRelayFilterMap = useStableValue(relayFilterMap);
+  const stableRelayFilterMap = useStableRelayFilterMap(relayFilterMap);
 
   // Core state (compatible with original useReqTimeline)
   const [loading, setLoading] = useState(false);
@@ -68,6 +77,21 @@ export function useReqTimelineEnhanced(
   );
   const queryStartedAt = useRef<number>(Date.now());
   const eoseReceivedRef = useRef<boolean>(false);
+
+  // Keep relay filter map in a ref so subscription callbacks always
+  // read the latest value without requiring subscription teardown
+  const relayFilterMapRef = useRef(stableRelayFilterMap);
+  useEffect(() => {
+    relayFilterMapRef.current = stableRelayFilterMap;
+  }, [stableRelayFilterMap]);
+
+  // Derive a key that only changes when the SET of relays in the filter map changes,
+  // not when filter content changes (pubkey redistribution). This prevents subscription
+  // churn when relay reasoning updates but the relay set stays the same.
+  const relaySetFromFilterMap = useMemo(() => {
+    if (!stableRelayFilterMap) return undefined;
+    return Object.keys(stableRelayFilterMap).sort().join(",");
+  }, [stableRelayFilterMap]);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -176,7 +200,8 @@ export function useReqTimelineEnhanced(
       const relay = pool.relay(url);
 
       // Use per-relay chunked filters if available, otherwise use the full filter
-      const relayFilters = stableRelayFilterMap?.[url];
+      // Read from ref so filter map updates don't require subscription teardown
+      const relayFilters = relayFilterMapRef.current?.[url];
       const filtersForRelay = relayFilters
         ? relayFilters.map((f) => ({ ...f, limit: limit || f.limit }))
         : filtersWithLimit;
@@ -225,47 +250,59 @@ export function useReqTimelineEnhanced(
               // Event received - store and track per relay
               const event = response as NostrEvent & { _relay?: string };
 
-              // Store in EventStore and local map
+              // Store in EventStore (global) and local map
               eventStore.add(event);
+
+              // Fix 1a: Skip duplicate events already in our map
               setEventsMap((prev) => {
+                if (prev.has(event.id)) return prev;
                 const next = new Map(prev);
                 next.set(event.id, event);
+
+                // Fix 3: Cap events during streaming to prevent unbounded growth
+                if (stream && next.size > MAX_STREAMING_EVENTS) {
+                  const entries = Array.from(next.entries());
+                  entries.sort((a, b) => a[1].created_at - b[1].created_at);
+                  const evictCount = Math.floor(
+                    MAX_STREAMING_EVENTS * EVICTION_FRACTION,
+                  );
+                  for (let i = 0; i < evictCount; i++) {
+                    next.delete(entries[i][0]);
+                  }
+                }
+
                 return next;
               });
 
-              // Update relay state for this specific relay
-              // Use url from subscription, not event._relay (which might be wrong)
+              // Fix 1b + 5: Only update relay state on actual state transitions
               setRelayStates((prev) => {
                 const state = prev.get(url);
-                const now = Date.now();
-                const next = new Map(prev);
 
-                if (!state) {
-                  // Relay not in map - initialize it (defensive)
-                  console.warn(
-                    "REQ Enhanced: Event from unknown relay, initializing",
-                    url,
-                  );
-                  next.set(url, {
-                    url,
-                    connectionState: "connected",
-                    subscriptionState: "receiving",
-                    eventCount: 1,
-                    firstEventAt: now,
-                    lastEventAt: now,
-                  });
-                } else {
-                  // Update existing relay state
-                  next.set(url, {
-                    ...state,
-                    subscriptionState:
-                      state.subscriptionState === "eose" ? "eose" : "receiving",
-                    eventCount: state.eventCount + 1,
-                    firstEventAt: state.firstEventAt ?? now,
-                    lastEventAt: now,
-                  });
+                // Fix 5: Don't add unknown relays to the state map
+                if (!state) return prev;
+
+                const now = Date.now();
+                const newSubState =
+                  state.subscriptionState === "eose" ? "eose" : "receiving";
+
+                // Only create new Map when subscription state actually transitions
+                // (waiting → receiving). Counter-only updates are applied in-place
+                // and become visible on the next state transition.
+                if (state.subscriptionState === newSubState) {
+                  state.eventCount += 1;
+                  state.lastEventAt = now;
+                  return prev; // No re-render for counter-only updates
                 }
 
+                // State transition — create new Map
+                const next = new Map(prev);
+                next.set(url, {
+                  ...state,
+                  subscriptionState: newSubState,
+                  eventCount: state.eventCount + 1,
+                  firstEventAt: state.firstEventAt ?? now,
+                  lastEventAt: now,
+                });
                 return next;
               });
             } else {
@@ -307,7 +344,7 @@ export function useReqTimelineEnhanced(
     id,
     stableFilters,
     stableRelays,
-    stableRelayFilterMap,
+    relaySetFromFilterMap,
     limit,
     stream,
     eventStore,
