@@ -61,21 +61,21 @@ export function AppShell({ children, hideBottomBar = false }: AppShellProps) {
       />
       <GlobalAuthPrompt />
       <main className="h-dvh w-screen flex flex-col bg-background text-foreground">
-        <header className="flex flex-row items-center justify-between px-1 border-b border-border">
-          <button
-            onClick={() => setCommandLauncherOpen(true)}
-            className="p-1.5 text-muted-foreground hover:text-accent transition-colors cursor-crosshair flex items-center gap-2"
-            title="Launch command (Cmd+K)"
-            aria-label="Launch command palette"
-          >
-            <Terminal className="size-4" />
-          </button>
-
-          <div className="flex items-center gap-2">
-            <SpellbookDropdown />
+        <header className="flex flex-row items-center px-1 border-b border-border">
+          <div className="flex-1 flex items-center">
+            <button
+              onClick={() => setCommandLauncherOpen(true)}
+              className="p-1.5 text-muted-foreground hover:text-accent transition-colors cursor-crosshair flex items-center gap-2"
+              title="Launch command (Cmd+K)"
+              aria-label="Launch command palette"
+            >
+              <Terminal className="size-4" />
+            </button>
           </div>
 
-          <div className="flex items-center">
+          <SpellbookDropdown />
+
+          <div className="flex-1 flex items-center justify-end">
             <FavoriteSpellsDropdown />
             <UserMenu />
           </div>

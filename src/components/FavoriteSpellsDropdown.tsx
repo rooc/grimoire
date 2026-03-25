@@ -1,4 +1,4 @@
-import { WandSparkles, Play, Star } from "lucide-react";
+import { WandSparkles, Star } from "lucide-react";
 import { useAccount } from "@/hooks/useAccount";
 import { useFavoriteSpells } from "@/hooks/useFavoriteSpells";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
@@ -62,14 +62,15 @@ function FavoriteSpellItem({ pointer }: { pointer: EventPointer }) {
       onClick={handleCast}
       className="cursor-pointer py-2 hover:bg-muted focus:bg-muted transition-colors"
     >
-      <Play className="size-3.5 mr-2 text-muted-foreground" />
       <div className="flex flex-col min-w-0 flex-1">
         <span className="text-sm truncate">
-          {decoded.name || "Unnamed Spell"}
+          {decoded.name || decoded.command}
         </span>
-        <span className="text-[10px] font-mono text-muted-foreground truncate">
-          {decoded.command}
-        </span>
+        {decoded.name && (
+          <span className="text-[10px] font-mono text-muted-foreground truncate">
+            {decoded.command}
+          </span>
+        )}
       </div>
     </DropdownMenuItem>
   );
