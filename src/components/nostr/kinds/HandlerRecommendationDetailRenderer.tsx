@@ -11,7 +11,7 @@ import {
 import { KindBadge } from "@/components/KindBadge";
 import { Badge } from "@/components/ui/badge";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { UserName } from "../UserName";
 import { Globe, Smartphone, TabletSmartphone, Package } from "lucide-react";
 import { useState } from "react";
@@ -49,7 +49,7 @@ function HandlerCard({
   address: { kind: number; pubkey: string; identifier: string };
   platform?: string;
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const handlerEvent = useNostrEvent(address);
 
   if (!handlerEvent) {

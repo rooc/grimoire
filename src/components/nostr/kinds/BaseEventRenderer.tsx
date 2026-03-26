@@ -18,14 +18,15 @@ import {
 import {
   Menu,
   Copy,
-  Check,
+  CopyCheck,
   FileJson,
   ExternalLink,
   Zap,
   MessageSquare,
   SmilePlus,
+  Star,
 } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow, useGrimoire } from "@/core/state";
 import { useCopy } from "@/hooks/useCopy";
 import { useAccount } from "@/hooks/useAccount";
 import { useSettings } from "@/hooks/useSettings";
@@ -41,10 +42,12 @@ import { cn } from "@/lib/utils";
 import { isAddressableKind } from "@/lib/nostr-kinds";
 import { getSemanticAuthor } from "@/lib/semantic-author";
 import { EventFactory } from "applesauce-core/event-factory";
-import { ReactionBlueprint } from "applesauce-common/blueprints";
+import { ReactionBlueprint } from "@/lib/blueprints";
 import { publishEventToRelays } from "@/services/hub";
 import { selectRelaysForInteraction } from "@/services/relay-selection";
 import type { EmojiTag } from "@/lib/emoji-helpers";
+import { useFavoriteSpells } from "@/hooks/useFavoriteSpells";
+import { SPELL_KIND } from "@/constants/kinds";
 
 /**
  * Universal event properties and utilities shared across all kind renderers
@@ -133,9 +136,12 @@ export function EventMenu({
   onReactClick?: () => void;
   canSign?: boolean;
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
+  const isSpell = event.kind === SPELL_KIND;
+  const favorited = isSpell && isFavorite(event.id);
 
   const openEventDetail = () => {
     let pointer;
@@ -239,8 +245,8 @@ export function EventMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="hover:text-foreground text-muted-foreground transition-colors">
-          <Menu className="size-3" />
+        <button className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 flex items-center justify-center hover:text-foreground text-muted-foreground transition-colors">
+          <Menu className="size-4 md:size-3" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -264,10 +270,21 @@ export function EventMenu({
             React
           </DropdownMenuItem>
         )}
+        {canSign && isSpell && (
+          <DropdownMenuItem
+            onClick={() => toggleFavorite(event)}
+            disabled={isUpdating}
+          >
+            <Star
+              className={`size-4 mr-2 ${favorited ? "text-yellow-500 fill-current" : ""}`}
+            />
+            {favorited ? "Remove from Favorites" : "Add to Favorites"}
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={copyEventId}>
           {copied ? (
-            <Check className="size-4 mr-2 text-green-500" />
+            <CopyCheck className="size-4 mr-2 text-success" />
           ) : (
             <Copy className="size-4 mr-2" />
           )}
@@ -303,9 +320,12 @@ export function EventContextMenu({
   onReactClick?: () => void;
   canSign?: boolean;
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
+  const isSpell = event.kind === SPELL_KIND;
+  const favorited = isSpell && isFavorite(event.id);
 
   const openEventDetail = () => {
     let pointer;
@@ -430,10 +450,21 @@ export function EventContextMenu({
             React
           </ContextMenuItem>
         )}
+        {canSign && isSpell && (
+          <ContextMenuItem
+            onClick={() => toggleFavorite(event)}
+            disabled={isUpdating}
+          >
+            <Star
+              className={`size-4 mr-2 ${favorited ? "text-yellow-500 fill-current" : ""}`}
+            />
+            {favorited ? "Remove from Favorites" : "Add to Favorites"}
+          </ContextMenuItem>
+        )}
         <ContextMenuSeparator />
         <ContextMenuItem onClick={copyEventId}>
           {copied ? (
-            <Check className="size-4 mr-2 text-green-500" />
+            <CopyCheck className="size-4 mr-2 text-success" />
           ) : (
             <Copy className="size-4 mr-2" />
           )}
@@ -472,7 +503,7 @@ export function ClickableEventTitle({
   className,
   as: Component = "h3",
 }: ClickableEventTitleProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -530,7 +561,8 @@ export function BaseEventContainer({
     label?: string;
   };
 }) {
-  const { locale, addWindow } = useGrimoire();
+  const { locale } = useGrimoire();
+  const addWindow = useAddWindow();
   const { canSign, signer, pubkey } = useAccount();
   const { settings } = useSettings();
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -547,7 +579,11 @@ export function BaseEventContainer({
       factory.setSigner(signer);
 
       const emojiArg = customEmoji
-        ? { shortcode: customEmoji.shortcode, url: customEmoji.url }
+        ? {
+            shortcode: customEmoji.shortcode,
+            url: customEmoji.url,
+            address: customEmoji.address,
+          }
         : emoji;
 
       const draft = await factory.create(ReactionBlueprint, event, emojiArg);

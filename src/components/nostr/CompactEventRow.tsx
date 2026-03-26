@@ -1,7 +1,7 @@
 import { memo, useCallback } from "react";
 import type { NostrEvent } from "@/types/nostr";
 import { kinds } from "nostr-tools";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow, useGrimoire } from "@/core/state";
 import { formatTimestamp } from "@/hooks/useLocale";
 import { getTagValue } from "applesauce-core/helpers";
 import { getZapSender } from "applesauce-common/helpers/zap";
@@ -24,7 +24,7 @@ interface CompactEventRowProps {
  * Layout: [KindBadge] [Author] [Preview] [Time]
  */
 export function CompactEventRow({ event }: CompactEventRowProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { locale } = useGrimoire();
 
   // Get the compact preview renderer for this kind, or use default

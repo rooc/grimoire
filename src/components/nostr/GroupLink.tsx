@@ -1,5 +1,5 @@
 import { MessageSquare } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { cn } from "@/lib/utils";
 import { getTagValue } from "applesauce-core/helpers";
 import type { NostrEvent } from "@/types/nostr";
@@ -34,7 +34,7 @@ export function GroupLink({
   className,
   iconClassname,
 }: GroupLinkProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Handle special case: "_" is the unmanaged relay top-level group
   const isUnmanagedGroup = groupId === "_";

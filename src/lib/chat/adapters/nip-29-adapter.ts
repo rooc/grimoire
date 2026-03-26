@@ -1,5 +1,10 @@
-import { Observable, firstValueFrom } from "rxjs";
-import { map, first, toArray } from "rxjs/operators";
+import {
+  Observable,
+  firstValueFrom,
+  BehaviorSubject,
+  combineLatest,
+} from "rxjs";
+import { map, first, toArray, filter as filterOp } from "rxjs/operators";
 import type { Filter } from "nostr-tools";
 import { nip19 } from "nostr-tools";
 import type { EventPointer, AddressPointer } from "nostr-tools/nip19";
@@ -14,6 +19,7 @@ import type {
   ParticipantRole,
 } from "@/types/chat";
 import type { NostrEvent } from "@/types/nostr";
+import type { EmojiTag } from "@/lib/emoji-helpers";
 import type { ChatAction, GetActionsOptions } from "@/types/chat-actions";
 import eventStore from "@/services/event-store";
 import pool from "@/services/relay-pool";
@@ -24,10 +30,7 @@ import { getEventPointerFromETag } from "applesauce-core/helpers/pointers";
 import { mergeRelaySets } from "applesauce-core/helpers";
 import { normalizeRelayURL } from "@/lib/relay-url";
 import { EventFactory } from "applesauce-core/event-factory";
-import {
-  GroupMessageBlueprint,
-  ReactionBlueprint,
-} from "applesauce-common/blueprints";
+import { GroupMessageBlueprint, ReactionBlueprint } from "@/lib/blueprints";
 import { resolveGroupMetadata } from "@/lib/chat/group-metadata-helpers";
 
 /**
@@ -129,10 +132,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
       throw new Error("No active account");
     }
 
-    console.log(
-      `[NIP-29] Fetching group metadata for ${groupId} from ${relayUrl}`,
-    );
-
     // Fetch group metadata from the specific relay (kind 39000)
     const metadataFilter: Filter = {
       kinds: [39000],
@@ -149,7 +148,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     // Subscribe and wait for EOSE
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.log("[NIP-29] Metadata fetch timeout");
         resolve();
       }, 5000);
 
@@ -158,9 +156,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
           if (typeof response === "string") {
             // EOSE received
             clearTimeout(timeout);
-            console.log(
-              `[NIP-29] Got ${metadataEvents.length} metadata events`,
-            );
             sub.unsubscribe();
             resolve();
           } else {
@@ -179,11 +174,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
 
     const metadataEvent = metadataEvents[0];
 
-    // Debug: Log metadata event tags
-    if (metadataEvent) {
-      console.log(`[NIP-29] Metadata event tags:`, metadataEvent.tags);
-    }
-
     // Resolve group metadata with profile fallback
     const resolved = await resolveGroupMetadata(
       groupId,
@@ -194,8 +184,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     const title = resolved.name || groupId;
     const description = resolved.description;
     const icon = resolved.icon;
-
-    console.log(`[NIP-29] Group title: ${title} (source: ${resolved.source})`);
 
     // Fetch admins (kind 39001) and members (kind 39002) in parallel
     // Both use d tag (addressable events signed by relay)
@@ -217,8 +205,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
         .request([relayUrl], [adminsFilter, membersFilter], { eventStore })
         .pipe(toArray()),
     );
-
-    console.log(`[NIP-29] Got ${participantEvents.length} participant events`);
 
     const adminEvents = participantEvents.filter((e) => e.kind === 39001);
     const memberEvents = participantEvents.filter((e) => e.kind === 39002);
@@ -271,13 +257,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
 
     const participants = Array.from(participantsMap.values());
 
-    console.log(
-      `[NIP-29] Found ${participants.length} participants (${adminEvents.length} admin events, ${memberEvents.length} member events)`,
-    );
-    console.log(
-      `[NIP-29] Metadata - title: ${title}, icon: ${icon}, description: ${description}`,
-    );
-
     return {
       id: `nip-29:${relayUrl}'${groupId}`,
       type: "group",
@@ -308,8 +287,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
       throw new Error("Group ID and relay URL required");
     }
 
-    console.log(`[NIP-29] Loading messages for ${groupId} from ${relayUrl}`);
-
     // Single filter for all group events:
     // kind 9: chat messages
     // kind 9000: put-user (admin adds user)
@@ -332,6 +309,9 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     const conversationId = `nip-29:${relayUrl}'${groupId}`;
     this.cleanup(conversationId);
 
+    // Track EOSE state - don't emit until initial batch is loaded
+    const eoseReceived$ = new BehaviorSubject<boolean>(false);
+
     // Start a persistent subscription to the group relay
     const subscription = pool
       .subscription([relayUrl], [filter], {
@@ -340,11 +320,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
       .subscribe({
         next: (response) => {
           if (typeof response === "string") {
-            console.log("[NIP-29] EOSE received");
-          } else {
-            console.log(
-              `[NIP-29] Received event k${response.kind}: ${response.id.slice(0, 8)}...`,
-            );
+            eoseReceived$.next(true);
           }
         },
       });
@@ -352,9 +328,10 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     // Store subscription for cleanup
     this.subscriptions.set(conversationId, subscription);
 
-    // Return observable from EventStore which will update automatically
-    return eventStore.timeline(filter).pipe(
-      map((events) => {
+    // Return observable that only emits after EOSE (prevents partial renders during initial load)
+    return combineLatest([eventStore.timeline(filter), eoseReceived$]).pipe(
+      filterOp(([, eose]) => eose), // Only emit after EOSE received
+      map(([events]) => {
         const messages = events.map((event) => {
           // Convert nutzaps (kind 9321) using nutzapToMessage
           if (event.kind === 9321) {
@@ -364,7 +341,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
           return this.eventToMessage(event, conversation.id);
         });
 
-        console.log(`[NIP-29] Timeline has ${messages.length} events`);
         // EventStore timeline returns events sorted by created_at desc,
         // we need ascending order for chat. Since it's already sorted,
         // just reverse instead of full sort (O(n) vs O(n log n))
@@ -387,10 +363,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
       throw new Error("Group ID and relay URL required");
     }
 
-    console.log(
-      `[NIP-29] Loading older messages for ${groupId} before ${before}`,
-    );
-
     // Same filter as loadMessages but with until for pagination
     const filter: Filter = {
       kinds: [9, 9000, 9001, 9321],
@@ -403,8 +375,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     const events = await firstValueFrom(
       pool.request([relayUrl], [filter], { eventStore }).pipe(toArray()),
     );
-
-    console.log(`[NIP-29] Loaded ${events.length} older events`);
 
     // Convert events to messages
     const messages = events.map((event) => {
@@ -455,13 +425,23 @@ export class Nip29Adapter extends ChatProtocolAdapter {
         emojis: options?.emojiTags?.map((e) => ({
           shortcode: e.shortcode,
           url: e.url,
+          address: e.address,
         })),
       },
     );
 
-    // Add q-tag for replies (NIP-29 specific, not in blueprint yet)
+    // Add q-tag for replies (quote tag format)
+    // Format: ["q", eventId, relayUrl, pubkey]
     if (options?.replyTo) {
-      draft.tags.push(["q", options.replyTo]);
+      // Look up the event to get the author's pubkey for the q-tag
+      const replyEvent = eventStore.getEvent(options.replyTo);
+      if (replyEvent) {
+        // Full q-tag with relay hint and author pubkey
+        draft.tags.push(["q", options.replyTo, relayUrl, replyEvent.pubkey]);
+      } else {
+        // Fallback: at minimum include the relay hint since we know it
+        draft.tags.push(["q", options.replyTo, relayUrl]);
+      }
     }
 
     // Add NIP-92 imeta tags for blob attachments (not yet handled by applesauce)
@@ -489,7 +469,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     conversation: Conversation,
     messageId: string,
     emoji: string,
-    customEmoji?: { shortcode: string; url: string },
+    customEmoji?: EmojiTag,
   ): Promise<void> {
     const activePubkey = accountManager.active$.value?.pubkey;
     const activeSigner = accountManager.active$.value?.signer;
@@ -519,9 +499,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     factory.setSigner(activeSigner);
 
     // Use ReactionBlueprint - auto-handles e-tag, k-tag, p-tag, custom emoji
-    const emojiArg = customEmoji
-      ? { shortcode: customEmoji.shortcode, url: customEmoji.url }
-      : emoji;
+    const emojiArg = customEmoji ?? emoji;
 
     const draft = await factory.create(
       ReactionBlueprint,
@@ -545,7 +523,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
   getCapabilities(): ChatCapabilities {
     return {
       supportsEncryption: false, // kind 9 messages are public
-      supportsThreading: true, // q-tag replies (NIP-C7 style)
+      supportsThreading: true, // q-tag replies
       supportsModeration: true, // kind 9005/9006 for delete/ban
       supportsRoles: true, // admin, moderator, member
       supportsGroupManagement: true, // join/leave via kind 9021
@@ -817,10 +795,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
       return null;
     }
 
-    console.log(
-      `[NIP-29] Fetching reply message ${eventId.slice(0, 8)}... from ${relays.join(", ")}`,
-    );
-
     const filter: Filter = {
       ids: [eventId],
       limit: 1,
@@ -831,9 +805,6 @@ export class Nip29Adapter extends ChatProtocolAdapter {
 
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => {
-        console.log(
-          `[NIP-29] Reply message fetch timeout for ${eventId.slice(0, 8)}...`,
-        );
         resolve();
       }, 3000);
 
@@ -1085,8 +1056,11 @@ export class Nip29Adapter extends ChatProtocolAdapter {
 
       let content = "";
       if (event.kind === 9000) {
-        // put-user: admin adds someone (show as joined)
-        content = "joined";
+        // put-user: admin adds someone
+        // If p-tag has a role (3rd element), show "is/are now <role>" instead of "joined"
+        const role = pTags[0]?.[2];
+        const verb = pTags.length > 1 ? "are" : "is";
+        content = role ? `${verb} now ${role}` : "joined";
       } else if (event.kind === 9001) {
         // remove-user: admin removes someone
         content = "left";
@@ -1108,7 +1082,7 @@ export class Nip29Adapter extends ChatProtocolAdapter {
     }
 
     // Regular chat message (kind 9)
-    // Look for reply q-tags (NIP-29 uses q-tags like NIP-C7)
+    // Look for reply q-tags
     // Use getQuotePointer to extract full EventPointer with relay hints
     const replyTo = getQuotePointer(event);
 

@@ -26,7 +26,6 @@ const initialState: GrimoireState = {
     insertionPosition: "second",
     autoPreset: undefined,
   },
-  compactModeKinds: [6, 7, 16, 9735],
   workspaces: {
     default: {
       id: "default",
@@ -47,9 +46,6 @@ const storage = createJSONStorage<GrimoireState>(() => ({
       const storedVersion = parsed.__version || 5;
 
       if (storedVersion < CURRENT_VERSION) {
-        console.log(
-          `[Storage] State version outdated (v${storedVersion}), migrating...`,
-        );
         const migrated = migrateState(parsed);
         localStorage.setItem(key, JSON.stringify(migrated));
         toast.success("State Updated", {
@@ -136,6 +132,38 @@ const activeGrimoireStateAtom = atom(
     }
   },
 );
+
+/**
+ * Lightweight hook that returns only the addWindow callback.
+ * Does NOT subscribe to state changes — safe for use in deeply nested components
+ * (e.g., MarkdownContent, NostrMention) that only need to open windows.
+ */
+export const useAddWindow = () => {
+  const dispatch = useSetAtom(activeGrimoireStateAtom);
+
+  return useCallback(
+    (
+      appId: AppId,
+      props: any,
+      commandString?: string,
+      customTitle?: string,
+      spellId?: string,
+    ) => {
+      dispatch({
+        type: "UPDATE",
+        updater: (prev) =>
+          Logic.addWindow(prev, {
+            appId,
+            props,
+            commandString,
+            customTitle,
+            spellId,
+          }),
+      });
+    },
+    [dispatch],
+  );
+};
 
 // The Hook
 export const useGrimoire = () => {
@@ -236,6 +264,20 @@ export const useGrimoire = () => {
     [setState],
   );
 
+  const moveWindowToNewWorkspace = useCallback(
+    (windowId: string): number => {
+      let newWorkspaceNumber = 0;
+      setState((prev) => {
+        const result = Logic.moveWindowToNewWorkspace(prev, windowId);
+        newWorkspaceNumber =
+          result.state.workspaces[result.newWorkspaceId].number;
+        return result.state;
+      });
+      return newWorkspaceNumber;
+    },
+    [setState],
+  );
+
   const updateLayout = useCallback(
     (layout: any) => {
       setState((prev) => Logic.updateLayout(prev, layout));
@@ -312,13 +354,6 @@ export const useGrimoire = () => {
     [setState],
   );
 
-  const setCompactModeKinds = useCallback(
-    (kinds: number[]) => {
-      setState((prev) => Logic.setCompactModeKinds(prev, kinds));
-    },
-    [setState],
-  );
-
   const loadSpellbook = useCallback(
     (spellbook: ParsedSpellbook) => {
       setState((prev) => SpellbookManager.loadSpellbook(prev, spellbook));
@@ -385,6 +420,7 @@ export const useGrimoire = () => {
     updateWindow,
     removeWindow,
     moveWindowToWorkspace,
+    moveWindowToNewWorkspace,
     updateLayout,
     setActiveWorkspace,
     setActiveAccount,
@@ -394,7 +430,6 @@ export const useGrimoire = () => {
     applyPresetLayout,
     updateWorkspaceLabel,
     reorderWorkspaces,
-    setCompactModeKinds,
     loadSpellbook,
     clearActiveSpellbook,
     switchToTemporary,

@@ -2,7 +2,7 @@ import type { NostrEvent } from "@/types/nostr";
 import { getTagValue } from "applesauce-core/helpers";
 import { getSeenRelays } from "applesauce-core/helpers/relays";
 import { BaseEventContainer, ClickableEventTitle } from "./BaseEventRenderer";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { MessageSquare } from "lucide-react";
 
 interface GroupMetadataRendererProps {
@@ -14,7 +14,7 @@ interface GroupMetadataRendererProps {
  * Displays group info and links to chat
  */
 export function GroupMetadataRenderer({ event }: GroupMetadataRendererProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Extract group metadata
   const groupId = getTagValue(event, "d") || "";

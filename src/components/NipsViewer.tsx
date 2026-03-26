@@ -4,7 +4,7 @@ import { VALID_NIPS, NIP_TITLES } from "@/constants/nips";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { NIPBadge } from "./NIPBadge";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { CenteredContent } from "./ui/CenteredContent";
 
 /**
@@ -14,7 +14,7 @@ import { CenteredContent } from "./ui/CenteredContent";
 export default function NipsViewer() {
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Autofocus on mount
   useEffect(() => {

@@ -8,7 +8,7 @@ import {
   FolderGit2,
 } from "lucide-react";
 import { useCopy } from "@/hooks/useCopy";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import type { NostrEvent } from "@/types/nostr";
 import {
@@ -30,7 +30,7 @@ export function RepositoryStateDetailRenderer({
 }: {
   event: NostrEvent;
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const repoId = useMemo(() => getRepositoryIdentifier(event), [event]);
   const headRef = useMemo(() => getRepositoryStateHead(event), [event]);
   const branch = useMemo(() => parseHeadBranch(headRef), [headRef]);

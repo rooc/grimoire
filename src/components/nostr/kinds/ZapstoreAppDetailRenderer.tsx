@@ -17,7 +17,7 @@ import { ExternalLink } from "@/components/ExternalLink";
 import { MediaEmbed } from "../MediaEmbed";
 import { Badge } from "@/components/ui/badge";
 import { useMemo } from "react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import {
   Package,
   Globe,
@@ -40,7 +40,7 @@ interface ZapstoreAppDetailRendererProps {
  * Release item component showing version and download link
  */
 function ReleaseItem({ release }: { release: NostrEvent }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const version = getReleaseVersion(release);
   const fileEventId = getReleaseFileEventId(release);
 
@@ -158,7 +158,7 @@ function PlatformItem({ platform }: { platform: Platform }) {
 export function ZapstoreAppDetailRenderer({
   event,
 }: ZapstoreAppDetailRendererProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const appName = getAppName(event);
   const summary = getAppSummary(event);
   const iconUrl = getAppIcon(event);

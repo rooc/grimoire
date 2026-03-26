@@ -552,6 +552,49 @@ export async function selectRelaysForFilter(
   };
 }
 
+/**
+ * Selects relays for publishing an event using the outbox model
+ *
+ * Strategy (in priority order):
+ * 1. Author's outbox relays (kind 10002)
+ * 2. Caller-provided write relays (e.g. from Grimoire state)
+ * 3. Additional relay hints (seen relays, explicit hints)
+ * 4. Aggregator relays (fallback)
+ *
+ * @param authorPubkey - Pubkey of the event author
+ * @param options - Write relays and hints to merge
+ * @returns Promise resolving to deduplicated array of relay URLs
+ */
+export async function selectRelaysForPublish(
+  authorPubkey: string,
+  options: { writeRelays?: string[]; relayHints?: string[] } = {},
+): Promise<string[]> {
+  const { writeRelays = [], relayHints = [] } = options;
+
+  const relaySets: string[][] = [];
+
+  // 1. Author's outbox relays from kind 10002
+  const outboxRelays = await relayListCache.getOutboxRelays(authorPubkey);
+  if (outboxRelays && outboxRelays.length > 0) {
+    relaySets.push(outboxRelays);
+  }
+
+  // 2. Caller-provided write relays
+  if (writeRelays.length > 0) {
+    relaySets.push(writeRelays);
+  }
+
+  // 3. Relay hints
+  if (relayHints.length > 0) {
+    relaySets.push(relayHints);
+  }
+
+  // 4. Aggregator relays as fallback
+  relaySets.push(AGGREGATOR_RELAYS);
+
+  return mergeRelaySets(...relaySets);
+}
+
 /** Maximum number of relays for interactions */
 const MAX_INTERACTION_RELAYS = 10;
 
@@ -574,11 +617,22 @@ export async function selectRelaysForInteraction(
   authorPubkey: string,
   targetPubkey: string,
 ): Promise<string[]> {
-  // Fetch relays in parallel
-  const [authorOutbox, targetInbox] = await Promise.all([
+  // Check cache first, only fetch from network if missing
+  const [cachedOutbox, cachedInbox] = await Promise.all([
     relayListCache.getOutboxRelays(authorPubkey),
     relayListCache.getInboxRelays(targetPubkey),
   ]);
+
+  const needsFetch: Promise<void>[] = [];
+  if (!cachedOutbox) needsFetch.push(fetchRelayList(authorPubkey, 1000));
+  if (!cachedInbox) needsFetch.push(fetchRelayList(targetPubkey, 1000));
+  if (needsFetch.length > 0) await Promise.all(needsFetch);
+
+  // Re-read after fetch (use cached values if no fetch was needed)
+  const authorOutbox =
+    cachedOutbox ?? (await relayListCache.getOutboxRelays(authorPubkey));
+  const targetInbox =
+    cachedInbox ?? (await relayListCache.getInboxRelays(targetPubkey));
 
   const outboxRelays = authorOutbox || [];
   const inboxRelays = targetInbox || [];

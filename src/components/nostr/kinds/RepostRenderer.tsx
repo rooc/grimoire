@@ -2,7 +2,7 @@ import { Repeat2 } from "lucide-react";
 import { getEventPointerFromETag } from "applesauce-core/helpers/pointers";
 import { BaseEventContainer, type BaseEventProps } from "./BaseEventRenderer";
 import { EmbeddedEvent } from "../EmbeddedEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 
 /**
  * Renderer for Kind 6 (Repost) and Kind 16 (Generic Repost)
@@ -12,7 +12,7 @@ import { useGrimoire } from "@/core/state";
  * Kind 16: Generic repost for any event kind (NIP-18)
  */
 export function RepostRenderer({ event }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Get the event being reposted (e tag) with relay hints
   const eTag = event.tags.find((tag) => tag[0] === "e");

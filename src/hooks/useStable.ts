@@ -55,6 +55,53 @@ export function useStableArray<T extends string>(arr: T[]): T[] {
  * @param filters - Single filter or array of filters
  * @returns The memoized filter(s)
  */
+/**
+ * Stabilize a relay filter map using structural comparison.
+ *
+ * Compares relay keys (sorted), then filter content per relay using
+ * isFilterEqual. Avoids JSON.stringify overhead for large filter maps
+ * with many relays and pubkeys.
+ */
+export function useStableRelayFilterMap(
+  map: Record<string, Filter[]> | undefined,
+): Record<string, Filter[]> | undefined {
+  const prevRef = useRef<Record<string, Filter[]> | undefined>(undefined);
+
+  if (map === undefined && prevRef.current === undefined) return undefined;
+  if (map === undefined || prevRef.current === undefined) {
+    prevRef.current = map;
+    return map;
+  }
+
+  const prevKeys = Object.keys(prevRef.current).sort();
+  const nextKeys = Object.keys(map).sort();
+
+  if (
+    prevKeys.length !== nextKeys.length ||
+    prevKeys.some((k, i) => k !== nextKeys[i])
+  ) {
+    prevRef.current = map;
+    return map;
+  }
+
+  for (const key of prevKeys) {
+    const prevFilters = prevRef.current[key];
+    const nextFilters = map[key];
+    if (prevFilters.length !== nextFilters.length) {
+      prevRef.current = map;
+      return map;
+    }
+    for (let i = 0; i < prevFilters.length; i++) {
+      if (!isFilterEqual(prevFilters[i], nextFilters[i])) {
+        prevRef.current = map;
+        return map;
+      }
+    }
+  }
+
+  return prevRef.current;
+}
+
 export function useStableFilters<T extends Filter | Filter[]>(filters: T): T {
   const prevFiltersRef = useRef<T | undefined>(undefined);
 

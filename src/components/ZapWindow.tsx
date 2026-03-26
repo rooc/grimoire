@@ -11,7 +11,7 @@
  * - Shows feed render of zapped event
  */
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
   Zap,
@@ -118,17 +118,7 @@ export function ZapWindow({
   const activeAccount = accountManager.active;
   const canSign = !!activeAccount?.signer;
 
-  const { wallet, payInvoice, refreshBalance, getInfo } = useWallet();
-
-  // Fetch wallet info
-  const [walletInfo, setWalletInfo] = useState<any>(null);
-  useEffect(() => {
-    if (wallet) {
-      getInfo()
-        .then((info) => setWalletInfo(info))
-        .catch((error) => console.error("Failed to get wallet info:", error));
-    }
-  }, [wallet, getInfo]);
+  const { wallet, payInvoice, refreshBalance, walletMethods } = useWallet();
 
   // Cache LNURL data for recipient's Lightning address
   const { data: lnurlData } = useLnurlCache(recipientProfile?.lud16);
@@ -337,7 +327,10 @@ export function ZapWindow({
           `Amount too small. Minimum: ${Math.ceil(lnurlData.minSendable / 1000)} sats`,
         );
       }
-      if (amountMillisats > lnurlData.maxSendable) {
+      if (
+        lnurlData.maxSendable > 0 &&
+        amountMillisats > lnurlData.maxSendable
+      ) {
         throw new Error(
           `Amount too large. Maximum: ${Math.floor(lnurlData.maxSendable / 1000)} sats`,
         );
@@ -352,14 +345,12 @@ export function ZapWindow({
       const comment = serialized.text;
       const emojiTags = serialized.emojiTags;
 
-      // Validate comment length if provided
-      if (comment && lnurlData.commentAllowed) {
-        if (comment.length > lnurlData.commentAllowed) {
-          throw new Error(
-            `Comment too long. Maximum ${lnurlData.commentAllowed} characters.`,
-          );
-        }
-      }
+      // Check if LNURL server accepts comments (commentAllowed > 0)
+      // The comment always goes in the zap request event (kind 9734 content)
+      // But only goes to the LNURL callback if the server accepts it and it fits
+      const commentAllowedLength = lnurlData.commentAllowed ?? 0;
+      const canIncludeCommentInCallback =
+        commentAllowedLength > 0 && comment.length <= commentAllowedLength;
 
       // Step 3: Create and sign zap request event (kind 9734)
       // If zapping anonymously, create a throwaway signer
@@ -385,11 +376,12 @@ export function ZapWindow({
       const serializedZapRequest = serializeZapRequest(zapRequest);
 
       // Step 4: Fetch invoice from LNURL callback
+      // Only include comment if server accepts it and it fits within the limit
       const invoiceResponse = await fetchInvoiceFromCallback(
         lnurlData.callback,
         amountMillisats,
         serializedZapRequest,
-        comment || undefined,
+        canIncludeCommentInCallback ? comment || undefined : undefined,
       );
 
       const invoiceText = invoiceResponse.pr;
@@ -400,7 +392,7 @@ export function ZapWindow({
       setInvoice(invoiceText);
 
       // Step 5: Pay or show QR code
-      if (useWallet && wallet && walletInfo?.methods.includes("pay_invoice")) {
+      if (useWallet && wallet && walletMethods.includes("pay_invoice")) {
         // Pay with NWC wallet with timeout
         setIsPayingWithWallet(true);
         try {
@@ -568,7 +560,7 @@ export function ZapWindow({
                 {/* Retry with wallet button if payment failed/timed out */}
                 {paymentTimedOut &&
                   wallet &&
-                  walletInfo?.methods.includes("pay_invoice") && (
+                  walletMethods.includes("pay_invoice") && (
                     <Button
                       onClick={handleRetryWallet}
                       disabled={isProcessing}
@@ -668,7 +660,7 @@ export function ZapWindow({
                     placeholder="Say something nice..."
                     searchProfiles={searchProfiles}
                     searchEmojis={searchEmojis}
-                    className="rounded-md border border-input bg-background px-3 py-1 text-base md:text-sm min-h-9"
+                    className="w-full"
                   />
                 )}
 
@@ -718,7 +710,7 @@ export function ZapWindow({
                     isPaid
                       ? onClose?.()
                       : handleZap(
-                          wallet && walletInfo?.methods.includes("pay_invoice"),
+                          !!(wallet && walletMethods.includes("pay_invoice")),
                         )
                   }
                   disabled={
@@ -741,7 +733,7 @@ export function ZapWindow({
                       <CheckCircle2 className="size-4 mr-2" />
                       Done
                     </>
-                  ) : wallet && walletInfo?.methods.includes("pay_invoice") ? (
+                  ) : wallet && walletMethods.includes("pay_invoice") ? (
                     <>
                       <Wallet className="size-4 mr-2" />
                       Pay with Wallet (

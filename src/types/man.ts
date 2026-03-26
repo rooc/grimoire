@@ -105,7 +105,7 @@ export const manPages: Record<string, ManPageEntry> = {
     examples: ["kinds    View all supported event kinds"],
     seeAlso: ["kind", "nip", "man"],
     appId: "kinds",
-    category: "System",
+    category: "Documentation",
     defaultProps: {},
   },
   nips: {
@@ -213,12 +213,12 @@ export const manPages: Record<string, ManPageEntry> = {
       {
         flag: "--since <time>",
         description:
-          "Events after timestamp (unix timestamp, relative: 30s, 1m, 2h, 7d, 2w, 3mo, 1y, or 'now')",
+          "Events after timestamp (unix timestamp, relative: 30s, 1m, 2h, 7d, 2w, 3mo, 1y, 'today' or 'now')",
       },
       {
         flag: "--until <time>",
         description:
-          "Events before timestamp (unix timestamp, relative: 30s, 1m, 2h, 7d, 2w, 3mo, 1y, or 'now')",
+          "Events before timestamp (unix timestamp, relative: 30s, 1m, 2h, 7d, 2w, 3mo, 1y, 'today' or 'now')",
       },
       {
         flag: "--search <text>",
@@ -233,6 +233,11 @@ export const manPages: Record<string, ManPageEntry> = {
         flag: "-v, --view <list|compact>",
         description:
           "Display mode for results. 'list' shows full event cards, 'compact' shows condensed single-line rows. Defaults to 'list'.",
+      },
+      {
+        flag: "-f, --follow",
+        description:
+          "Auto-refresh mode (like tail -f). Automatically displays new events instead of buffering them behind a 'X new events' button. Refreshes every second.",
       },
       {
         flag: "[relay...]",
@@ -272,6 +277,8 @@ export const manPages: Record<string, ManPageEntry> = {
       "req --search bitcoin -k 1            							    Search notes for 'bitcoin'",
       "req -k 1 theforest.nostr1.com relay.damus.io                                                 Query specific relays (overrides auto-selection)",
       "req -k 1 -l 100 --view compact                                                                 Get notes in compact view mode",
+      "req -k 1 -f                                                                                    Follow mode: auto-display new notes (1s refresh)",
+      "req -k 1 -a $contacts -f                                                                       Follow your contacts' notes in real-time",
     ],
     seeAlso: ["kind", "nip"],
     appId: "req",
@@ -778,7 +785,7 @@ export const manPages: Record<string, ManPageEntry> = {
     examples: ["spells          Browse your saved spells"],
     seeAlso: ["req"],
     appId: "spells",
-    category: "Nostr",
+    category: "System",
     defaultProps: {},
   },
   blossom: {
@@ -873,6 +880,18 @@ export const manPages: Record<string, ManPageEntry> = {
     examples: ["settings    Open settings panel"],
     seeAlso: ["post", "help"],
     appId: "settings",
+    category: "System",
+    defaultProps: {},
+  },
+  log: {
+    name: "log",
+    section: "1",
+    synopsis: "log",
+    description:
+      "View ephemeral log of relay operations for debugging and introspection. Shows PUBLISH events with per-relay status (success/error/pending), CONNECT/DISCONNECT events, AUTH challenges and results, and relay NOTICE messages. Click on failed relays to retry publishing. Filter by event type using tabs. Log is ephemeral and stored in memory only.",
+    examples: ["log    Open event log viewer"],
+    seeAlso: ["conn", "relay", "post"],
+    appId: "log",
     category: "System",
     defaultProps: {},
   },

@@ -13,7 +13,7 @@ import {
 } from "@/lib/zapstore-helpers";
 import { PlatformIcon } from "./zapstore/PlatformIcon";
 import { useMemo } from "react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { FileDown } from "lucide-react";
 import { getSeenRelays } from "applesauce-core/helpers/relays";
 import { relayListCache } from "@/services/relay-list-cache";
@@ -25,7 +25,7 @@ import { useLiveTimeline } from "@/hooks/useLiveTimeline";
  * Clean feed view with app name, summary, platform icons, and download button
  */
 export function ZapstoreAppRenderer({ event }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const appName = getAppName(event);
   const summary = getAppSummary(event);
   const identifier = getAppIdentifier(event);

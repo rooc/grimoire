@@ -105,12 +105,13 @@ const migrations: Record<number, MigrationFn> = {
       __version: 9,
     };
   },
-  // Migration from v9 to v10 - adds compactModeKinds
+  // Migration from v9 to v10 - version bump (compactModeKinds removed)
   9: (state: any) => {
+    // Remove compactModeKinds if it exists (no longer used)
+    const { compactModeKinds: _, ...rest } = state;
     return {
-      ...state,
+      ...rest,
       __version: 10,
-      compactModeKinds: [6, 7, 16, 9735],
     };
   },
 };
@@ -139,11 +140,6 @@ export function validateState(state: any): state is GrimoireState {
 
     // layoutConfig must be an object
     if (typeof state.layoutConfig !== "object") {
-      return false;
-    }
-
-    // compactModeKinds must be an array if present
-    if (state.compactModeKinds && !Array.isArray(state.compactModeKinds)) {
       return false;
     }
 
@@ -190,17 +186,10 @@ export function migrateState(state: any): GrimoireState {
   let currentState = state;
   const startVersion = state.__version || 5; // Default to 5 if no version
 
-  console.log(
-    `[Migrations] Migrating from v${startVersion} to v${CURRENT_VERSION}`,
-  );
-
   // Apply migrations sequentially
   for (let version = startVersion; version < CURRENT_VERSION; version++) {
     const migration = migrations[version];
     if (migration) {
-      console.log(
-        `[Migrations] Applying migration v${version} -> v${version + 1}`,
-      );
       try {
         currentState = migration(currentState);
       } catch (error) {
@@ -238,9 +227,6 @@ export function loadStateWithMigration(
     // Check if migration is needed
     const storedVersion = parsed.__version || 5;
     if (storedVersion < CURRENT_VERSION) {
-      console.log(
-        `[Migrations] State version outdated (v${storedVersion}), migrating...`,
-      );
       const migrated = migrateState(parsed);
 
       // Save migrated state
@@ -318,9 +304,6 @@ export function importState(
       let finalState: GrimoireState;
 
       if (storedVersion < CURRENT_VERSION) {
-        console.log(
-          `[Migrations] Imported state is v${storedVersion}, migrating...`,
-        );
         finalState = migrateState(parsed);
       } else if (!validateState(parsed)) {
         throw new Error("Imported state failed validation");

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { FolderGit2 } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import {
   getRepositoryName,
@@ -41,7 +41,7 @@ export function RepositoryLink({
   inline = false,
   showIcon = true,
 }: RepositoryLinkProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Parse repository address to get the pointer (if not provided directly)
   const repoPointer = useMemo(() => {

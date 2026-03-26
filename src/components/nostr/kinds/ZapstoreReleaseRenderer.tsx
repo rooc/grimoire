@@ -10,7 +10,7 @@ import {
   getAppName,
 } from "@/lib/zapstore-helpers";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { Badge } from "@/components/ui/badge";
 import { Package, FileDown } from "lucide-react";
 
@@ -19,7 +19,7 @@ import { Package, FileDown } from "lucide-react";
  * Displays release version with links to app and download file
  */
 export function ZapstoreReleaseRenderer({ event }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const version = getReleaseVersion(event);
   const fileEventId = getReleaseFileEventId(event);
   const appPointer = getReleaseAppPointer(event);

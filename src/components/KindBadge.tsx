@@ -1,6 +1,6 @@
 import { getKindInfo } from "@/constants/kinds";
 import { cn } from "@/lib/utils";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 
 interface KindBadgeProps {
   kind: number;
@@ -23,7 +23,7 @@ export function KindBadge({
   iconClassname = "text-muted-foreground",
   clickable = false,
 }: KindBadgeProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const kindInfo = getKindInfo(kind);
   const Icon = kindInfo?.icon;
 

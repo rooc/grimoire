@@ -227,6 +227,52 @@ export const moveWindowToWorkspace = (
   };
 };
 
+/**
+ * Creates a new workspace and moves a window to it.
+ * Returns an object with the new state and the new workspace ID.
+ */
+export const moveWindowToNewWorkspace = (
+  state: GrimoireState,
+  windowId: string,
+): { state: GrimoireState; newWorkspaceId: string } => {
+  const currentId = state.activeWorkspaceId;
+  const currentWs = state.workspaces[currentId];
+
+  // Find next available workspace number
+  const nextNumber = findLowestAvailableWorkspaceNumber(state.workspaces);
+
+  // Create new workspace ID
+  const newWorkspaceId = uuidv4();
+
+  // Remove window from current workspace
+  const newCurrentLayout = removeFromLayout(currentWs.layout, windowId);
+  const newCurrentWindowIds = currentWs.windowIds.filter(
+    (id) => id !== windowId,
+  );
+
+  // Create new state with new workspace and moved window
+  const newState: GrimoireState = {
+    ...state,
+    activeWorkspaceId: newWorkspaceId,
+    workspaces: {
+      ...state.workspaces,
+      [currentId]: {
+        ...currentWs,
+        layout: newCurrentLayout,
+        windowIds: newCurrentWindowIds,
+      },
+      [newWorkspaceId]: {
+        id: newWorkspaceId,
+        number: nextNumber,
+        layout: windowId,
+        windowIds: [windowId],
+      },
+    },
+  };
+
+  return { state: newState, newWorkspaceId };
+};
+
 export const updateLayout = (
   state: GrimoireState,
   layout: MosaicNode<string> | null,
@@ -502,19 +548,6 @@ export const reorderWorkspaces = (
   return {
     ...state,
     workspaces: newWorkspaces,
-  };
-};
-
-/**
- * Updates the list of event kinds that should be displayed in compact mode.
- */
-export const setCompactModeKinds = (
-  state: GrimoireState,
-  kinds: number[],
-): GrimoireState => {
-  return {
-    ...state,
-    compactModeKinds: kinds,
   };
 };
 

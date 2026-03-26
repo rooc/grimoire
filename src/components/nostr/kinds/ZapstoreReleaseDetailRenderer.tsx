@@ -8,7 +8,7 @@ import {
   getAppIcon,
 } from "@/lib/zapstore-helpers";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { Badge } from "@/components/ui/badge";
 import { UserName } from "../UserName";
 import {
@@ -29,7 +29,7 @@ interface ZapstoreReleaseDetailRendererProps {
 export function ZapstoreReleaseDetailRenderer({
   event,
 }: ZapstoreReleaseDetailRendererProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const version = getReleaseVersion(event);
   const identifier = getReleaseIdentifier(event);
   const fileEventId = getReleaseFileEventId(event);

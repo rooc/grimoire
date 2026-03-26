@@ -9,6 +9,7 @@ import { TabBar } from "../TabBar";
 import CommandLauncher from "../CommandLauncher";
 import { GlobalAuthPrompt } from "../GlobalAuthPrompt";
 import { SpellbookDropdown } from "../SpellbookDropdown";
+import { FavoriteSpellsDropdown } from "../FavoriteSpellsDropdown";
 import UserMenu from "../nostr/user-menu";
 import { AppShellContext } from "./AppShellContext";
 
@@ -31,9 +32,7 @@ export function AppShell({ children, hideBottomBar = false }: AppShellProps) {
 
   // Initialize global relay state manager
   useEffect(() => {
-    relayStateManager.initialize().catch((err) => {
-      console.error("Failed to initialize relay state manager:", err);
-    });
+    relayStateManager.initialize();
   }, []);
 
   // Sync relay state with Jotai
@@ -61,22 +60,25 @@ export function AppShell({ children, hideBottomBar = false }: AppShellProps) {
         onOpenChange={setCommandLauncherOpen}
       />
       <GlobalAuthPrompt />
-      <main className="h-screen w-screen flex flex-col bg-background text-foreground">
-        <header className="flex flex-row items-center justify-between px-1 border-b border-border">
-          <button
-            onClick={() => setCommandLauncherOpen(true)}
-            className="p-1.5 text-muted-foreground hover:text-accent transition-colors cursor-crosshair flex items-center gap-2"
-            title="Launch command (Cmd+K)"
-            aria-label="Launch command palette"
-          >
-            <Terminal className="size-4" />
-          </button>
-
-          <div className="flex items-center gap-2">
-            <SpellbookDropdown />
+      <main className="h-dvh w-screen flex flex-col bg-background text-foreground">
+        <header className="flex flex-row items-center px-1 border-b border-border">
+          <div className="flex-1 flex items-center">
+            <button
+              onClick={() => setCommandLauncherOpen(true)}
+              className="p-1.5 text-muted-foreground hover:text-accent transition-colors cursor-crosshair flex items-center gap-2"
+              title="Launch command (Cmd+K)"
+              aria-label="Launch command palette"
+            >
+              <Terminal className="size-4" />
+            </button>
           </div>
 
-          <UserMenu />
+          <SpellbookDropdown />
+
+          <div className="flex-1 flex items-center justify-end">
+            <FavoriteSpellsDropdown />
+            <UserMenu />
+          </div>
         </header>
         <section className="flex-1 relative overflow-hidden">
           {children}

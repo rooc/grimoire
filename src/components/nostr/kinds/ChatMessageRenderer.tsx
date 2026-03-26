@@ -3,19 +3,19 @@ import { BaseEventContainer, type BaseEventProps } from "./BaseEventRenderer";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import { UserName } from "../UserName";
 import { MessageCircle } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { getTagValues } from "@/lib/nostr-utils";
 import { isValidHexEventId } from "@/lib/nostr-validation";
 import { InlineReplySkeleton } from "@/components/ui/skeleton";
 
 /**
- * Renderer for Kind 9 - Chat Message (NIP-C7)
+ * Renderer for Kind 9 - Chat Message (NIP-29)
  * Displays chat messages with optional quoted parent message
  */
 export function Kind9Renderer({ event, depth = 0 }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
-  // Parse 'q' tag for quoted parent message (NIP-C7 reply format)
+  // Parse 'q' tag for quoted parent message
   const quotedEventIds = getTagValues(event, "q");
   const quotedEventId = quotedEventIds[0]; // First q tag
 

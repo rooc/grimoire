@@ -1,7 +1,7 @@
 import { BaseEventProps, BaseEventContainer } from "./BaseEventRenderer";
 import { NostrEvent } from "@/types/nostr";
 import { getServersFromEvent } from "@/services/blossom";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { HardDrive, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
  * Shows the user's configured Blossom blob storage servers
  */
 export function BlossomServerListRenderer({ event }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const servers = getServersFromEvent(event);
 
   const handleServerClick = (serverUrl: string) => {
@@ -73,7 +73,7 @@ export function BlossomServerListDetailRenderer({
 }: {
   event: NostrEvent;
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const servers = getServersFromEvent(event);
 
   const handleServerClick = (serverUrl: string) => {

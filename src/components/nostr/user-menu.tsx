@@ -10,6 +10,7 @@ import {
   LogOut,
   Settings,
 } from "lucide-react";
+import { WalletConnectionStatus } from "@/components/WalletConnectionStatus";
 import accounts from "@/services/accounts";
 import { useProfile } from "@/hooks/useProfile";
 import { use$ } from "applesauce-react/hooks";
@@ -37,7 +38,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Nip05 from "./nip05";
 import { RelayLink } from "./RelayLink";
-import SettingsDialog from "@/components/SettingsDialog";
 import LoginDialog from "./LoginDialog";
 import ConnectWalletDialog from "@/components/ConnectWalletDialog";
 import { useState } from "react";
@@ -86,7 +86,6 @@ export default function UserMenu() {
   const relays = state.activeAccount?.relays;
   const blossomServers = state.activeAccount?.blossomServers;
   const nwcConnection = state.nwcConnection;
-  const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showConnectWallet, setShowConnectWallet] = useState(false);
   const [showWalletInfo, setShowWalletInfo] = useState(false);
@@ -118,18 +117,12 @@ export default function UserMenu() {
     return sats.toString();
   }
 
-  // Get wallet service profile for display name, using wallet relays as hints
-  const walletServiceProfile = useProfile(
-    nwcConnection?.service,
-    nwcConnection?.relays,
-  );
-
-  // Use wallet hook for real-time balance and methods
+  // Use wallet hook for real-time balance and connection status
   const {
     disconnect: disconnectWallet,
     refreshBalance,
     balance,
-    wallet,
+    connectionStatus,
   } = useWallet();
 
   function openProfile() {
@@ -185,29 +178,8 @@ export default function UserMenu() {
     }
   }
 
-  function getWalletName(): string {
-    if (!nwcConnection) return "";
-    // Use service pubkey profile name, fallback to alias, then pubkey slice
-    return (
-      getDisplayName(nwcConnection.service, walletServiceProfile) ||
-      nwcConnection.info?.alias ||
-      nwcConnection.service.slice(0, 8)
-    );
-  }
-
-  function openWalletServiceProfile() {
-    if (!nwcConnection?.service) return;
-    addWindow(
-      "profile",
-      { pubkey: nwcConnection.service },
-      `Profile ${nwcConnection.service.slice(0, 8)}...`,
-    );
-    setShowWalletInfo(false);
-  }
-
   return (
     <>
-      <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
       <LoginDialog open={showLogin} onOpenChange={setShowLogin} />
       <ConnectWalletDialog
         open={showConnectWallet}
@@ -228,8 +200,7 @@ export default function UserMenu() {
 
             <div className="space-y-4">
               {/* Balance */}
-              {(balance !== undefined ||
-                nwcConnection.balance !== undefined) && (
+              {balance !== undefined && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
                     Balance:
@@ -243,7 +214,7 @@ export default function UserMenu() {
                       <span>
                         {state.walletBalancesBlurred
                           ? "✦✦✦✦✦✦"
-                          : formatBalance(balance ?? nwcConnection.balance)}
+                          : formatBalance(balance)}
                       </span>
                       {state.walletBalancesBlurred ? (
                         <EyeOff className="size-3 text-muted-foreground" />
@@ -263,30 +234,14 @@ export default function UserMenu() {
                 </div>
               )}
 
-              {/* Wallet Name */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Wallet:</span>
-                <button
-                  onClick={openWalletServiceProfile}
-                  className="text-sm font-medium hover:underline cursor-crosshair text-primary"
-                >
-                  {getWalletName()}
-                </button>
-              </div>
-
               {/* Connection Status */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`size-2 rounded-full ${
-                      wallet ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  />
-                  <span className="text-sm font-medium">
-                    {wallet ? "Connected" : "Disconnected"}
-                  </span>
-                </div>
+                <WalletConnectionStatus
+                  status={connectionStatus}
+                  size="md"
+                  showLabel
+                />
               </div>
 
               {/* Lightning Address */}
@@ -356,6 +311,7 @@ export default function UserMenu() {
           <Button
             size="sm"
             variant="link"
+            className="h-10 w-10 md:h-8 md:w-auto p-2 md:p-1"
             aria-label={account ? "User menu" : "Log in"}
           >
             {account ? (
@@ -401,25 +357,15 @@ export default function UserMenu() {
             >
               <div className="flex items-center gap-2">
                 <Wallet className="size-4 text-muted-foreground" />
-                {balance !== undefined ||
-                nwcConnection.balance !== undefined ? (
+                {balance !== undefined && (
                   <span className="text-sm">
                     {state.walletBalancesBlurred
                       ? "✦✦✦✦"
-                      : formatBalance(balance ?? nwcConnection.balance)}
+                      : formatBalance(balance)}
                   </span>
-                ) : null}
+                )}
               </div>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`size-1.5 rounded-full ${
-                    wallet ? "bg-green-500" : "bg-red-500"
-                  }`}
-                />
-                <span className="text-xs text-muted-foreground">
-                  {getWalletName()}
-                </span>
-              </div>
+              <WalletConnectionStatus status={connectionStatus} size="sm" />
             </DropdownMenuItem>
           ) : (
             <DropdownMenuItem

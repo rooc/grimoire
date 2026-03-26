@@ -26,7 +26,6 @@ import type {
   LiveActivityMetadata,
 } from "@/types/chat";
 import { CHAT_KINDS } from "@/types/chat";
-// import { NipC7Adapter } from "@/lib/chat/adapters/nip-c7-adapter";  // Coming soon
 import { Nip10Adapter } from "@/lib/chat/adapters/nip-10-adapter";
 import { Nip29Adapter } from "@/lib/chat/adapters/nip-29-adapter";
 import { Nip53Adapter } from "@/lib/chat/adapters/nip-53-adapter";
@@ -48,7 +47,7 @@ import { RelaysDropdown } from "./chat/RelaysDropdown";
 import { MessageReactions } from "./chat/MessageReactions";
 import { StatusBadge } from "./live/StatusBadge";
 import { ChatMessageContextMenu } from "./chat/ChatMessageContextMenu";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { Button } from "./ui/button";
 import LoginDialog from "./nostr/LoginDialog";
 import {
@@ -337,6 +336,22 @@ const MessageItem = memo(function MessageItem({
     [conversation],
   );
 
+  // Determine if the reply target is a chat message (not a reaction, repost, etc.)
+  // Extract event ID from reply pointer
+  const replyEventId =
+    message.replyTo && "id" in message.replyTo ? message.replyTo.id : undefined;
+  const replyEvent = use$(
+    () => (replyEventId ? eventStore.event(replyEventId) : undefined),
+    [replyEventId],
+  );
+
+  // Chat message kinds per protocol - only show reply preview for these
+  const isChatKindReply =
+    !message.replyTo ||
+    !replyEvent ||
+    (CHAT_KINDS as readonly number[]).includes(replyEvent.kind) ||
+    (conversation.protocol === "nip-10" && replyEvent.kind === 1);
+
   // System messages (join/leave) have special styling
   if (message.type === "system") {
     return (
@@ -460,7 +475,7 @@ const MessageItem = memo(function MessageItem({
         <div className="break-words overflow-hidden">
           {message.event ? (
             <RichText className="text-sm leading-tight" event={message.event}>
-              {message.replyTo && (
+              {message.replyTo && isChatKindReply && (
                 <ReplyPreview
                   replyTo={message.replyTo}
                   adapter={adapter}
@@ -513,7 +528,7 @@ export function ChatViewer({
   customTitle,
   headerPrefix,
 }: ChatViewerProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Get active account with signing capability
   const { pubkey, canSign, signer } = useAccount();
@@ -609,6 +624,11 @@ export function ChatViewer({
     };
   }, [adapter, conversation]);
 
+  // Reset initial scroll flag when conversation changes
+  useEffect(() => {
+    isInitialScrollDone.current = false;
+  }, [conversation?.id]);
+
   // Load messages for this conversation (reactive)
   const messages = use$(
     () => (conversation ? adapter.loadMessages(conversation) : undefined),
@@ -667,6 +687,8 @@ export function ChatViewer({
 
   // Track reply context (which message is being replied to)
   const [replyTo, setReplyTo] = useState<string | undefined>();
+  const replyToRef = useRef<string | undefined>(undefined);
+  replyToRef.current = replyTo;
 
   // State for loading older messages
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
@@ -674,6 +696,9 @@ export function ChatViewer({
 
   // Ref to Virtuoso for programmatic scrolling
   const virtuosoRef = useRef<VirtuosoHandle>(null);
+
+  // Track if initial scroll has completed (to avoid smooth scroll on first load)
+  const isInitialScrollDone = useRef(false);
 
   // State for send in progress (prevents double-sends)
   const [isSending, setIsSending] = useState(false);
@@ -717,6 +742,9 @@ export function ChatViewer({
         toast.error(errorMessage);
       } finally {
         setIsSending(false);
+        // Clear reply context after slash command execution
+        replyToRef.current = undefined;
+        setReplyTo(undefined);
       }
       return;
     }
@@ -729,7 +757,10 @@ export function ChatViewer({
         emojiTags,
         blobAttachments,
       });
-      setReplyTo(undefined); // Clear reply context only on success
+      // Clear reply context immediately (ref + state) so the next send
+      // cannot read a stale value before React re-renders.
+      replyToRef.current = undefined;
+      setReplyTo(undefined);
     } catch (error) {
       console.error("[Chat] Failed to send message:", error);
       const errorMessage =
@@ -774,8 +805,10 @@ export function ChatViewer({
   // Handle reply button click
   const handleReply = useCallback((messageId: string) => {
     setReplyTo(messageId);
-    // Focus the editor so user can start typing immediately
-    editorRef.current?.focus();
+    // Focus the editor after context menu closes (next frame)
+    requestAnimationFrame(() => {
+      editorRef.current?.focus();
+    });
   }, []);
 
   // Handle scroll to message (when clicking on reply preview)
@@ -1077,7 +1110,14 @@ export function ChatViewer({
             ref={virtuosoRef}
             data={messagesWithMarkers}
             initialTopMostItemIndex={messagesWithMarkers.length - 1}
-            followOutput="smooth"
+            followOutput={() => {
+              // Use instant scroll on initial load to avoid slow scroll animation
+              if (!isInitialScrollDone.current) {
+                isInitialScrollDone.current = true;
+                return "auto"; // Instant scroll (no animation)
+              }
+              return "smooth";
+            }}
             alignToBottom
             components={{
               Header: () =>
@@ -1196,7 +1236,12 @@ export function ChatViewer({
               }}
               onSubmit={(content, emojiTags, blobAttachments) => {
                 if (content.trim()) {
-                  handleSend(content, replyTo, emojiTags, blobAttachments);
+                  handleSend(
+                    content,
+                    replyToRef.current,
+                    emojiTags,
+                    blobAttachments,
+                  );
                 }
               }}
               className="flex-1 min-w-0"
@@ -1243,8 +1288,6 @@ function getAdapter(protocol: ChatProtocol): ChatProtocolAdapter {
   switch (protocol) {
     case "nip-10":
       return new Nip10Adapter();
-    // case "nip-c7":  // Phase 1 - Simple chat (coming soon)
-    //   return new NipC7Adapter();
     case "nip-29":
       return new Nip29Adapter();
     // case "nip-17":  // Phase 2 - Encrypted DMs (coming soon)

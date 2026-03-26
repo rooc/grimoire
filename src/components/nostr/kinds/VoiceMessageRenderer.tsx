@@ -1,7 +1,7 @@
 import { BaseEventContainer, type BaseEventProps } from "./BaseEventRenderer";
 import { MediaEmbed } from "../MediaEmbed";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { UserName } from "../UserName";
 import { RichText } from "../RichText";
 import { InlineReplySkeleton } from "@/components/ui/skeleton";
@@ -68,7 +68,7 @@ function ParentPreview({
  * Simple display: just the audio player, with reply context for 1244
  */
 export function VoiceMessageRenderer({ event }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Audio URL is in event.content per NIP-A0
   const audioUrl = event.content.trim();

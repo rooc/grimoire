@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { CodeCopyButton } from "@/components/CodeCopyButton";
 import { SyntaxHighlight } from "@/components/SyntaxHighlight";
 import { useCopy } from "@/hooks/useCopy";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import {
   getCodeLanguage,
@@ -32,7 +32,7 @@ interface Kind1337DetailRendererProps {
  * Note: NIP-C0 helpers wrap getTagValue which caches internally
  */
 export function Kind1337DetailRenderer({ event }: Kind1337DetailRendererProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
 
   // All these helpers wrap getTagValue, which caches internally
@@ -79,41 +79,6 @@ export function Kind1337DetailRenderer({ event }: Kind1337DetailRendererProps) {
       addWindow("open", { pointer: repoPointer });
     }
   };
-
-  // Normalize language to supported Prism languages
-  const normalizedLanguage = useMemo(() => {
-    if (!language) return null;
-    const lang = language.toLowerCase();
-
-    // Map common language names to Prism identifiers
-    const languageMap: Record<string, string> = {
-      js: "javascript",
-      ts: "typescript",
-      py: "python",
-      sh: "bash",
-      shell: "bash",
-      yml: "yaml",
-    };
-
-    const mapped = languageMap[lang] || lang;
-
-    // Check if it's a supported language
-    const supported = [
-      "javascript",
-      "typescript",
-      "jsx",
-      "tsx",
-      "bash",
-      "json",
-      "markdown",
-      "css",
-      "python",
-      "yaml",
-      "diff",
-    ];
-
-    return supported.includes(mapped) ? mapped : null;
-  }, [language]);
 
   return (
     <div className="flex flex-col gap-2 p-6">
@@ -195,29 +160,16 @@ export function Kind1337DetailRenderer({ event }: Kind1337DetailRendererProps) {
 
       {/* Code Section */}
       <div className="relative">
-        {normalizedLanguage ? (
-          <>
-            <SyntaxHighlight
-              code={event.content}
-              language={normalizedLanguage as any}
-              className="bg-muted p-4 pr-10 border border-border overflow-x-auto"
-            />
-            <CodeCopyButton
-              onCopy={handleCopyCode}
-              copied={copied}
-              label="Copy code"
-            />
-          </>
-        ) : (
-          <pre className="text-xs font-mono bg-muted p-4 pr-10 border border-border overflow-x-auto">
-            <CodeCopyButton
-              onCopy={handleCopyCode}
-              copied={copied}
-              label="Copy code"
-            />
-            <code>{event.content}</code>
-          </pre>
-        )}
+        <SyntaxHighlight
+          code={event.content}
+          language={language}
+          className="bg-muted p-4 pr-10 border border-border overflow-x-auto"
+        />
+        <CodeCopyButton
+          onCopy={handleCopyCode}
+          copied={copied}
+          label="Copy code"
+        />
       </div>
     </div>
   );

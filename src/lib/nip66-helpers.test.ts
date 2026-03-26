@@ -185,7 +185,7 @@ describe("Kind 30166 (Relay Discovery) Helpers", () => {
           ["N", "42"],
         ],
       });
-      expect(getSupportedNips(event)).toEqual([1, 11, 42, 65]);
+      expect(getSupportedNips(event)).toEqual(["1", "11", "42", "65"]);
     });
 
     it("should deduplicate NIPs", () => {
@@ -197,7 +197,7 @@ describe("Kind 30166 (Relay Discovery) Helpers", () => {
           ["N", "1"],
         ],
       });
-      expect(getSupportedNips(event)).toEqual([1, 11]);
+      expect(getSupportedNips(event)).toEqual(["1", "11"]);
     });
 
     it("should filter out invalid NIP numbers", () => {
@@ -209,7 +209,7 @@ describe("Kind 30166 (Relay Discovery) Helpers", () => {
           ["N", "11"],
         ],
       });
-      expect(getSupportedNips(event)).toEqual([1, 11]);
+      expect(getSupportedNips(event)).toEqual(["1", "11"]);
     });
 
     it("should return empty array if no NIP tags", () => {

@@ -31,7 +31,7 @@ export const darkTheme: Theme = {
     muted: "217.2 32.6% 17.5%",
     mutedForeground: "215 20.2% 70%",
 
-    destructive: "0 62.8% 30.6%",
+    destructive: "0 72% 63%",
     destructiveForeground: "210 40% 98%",
 
     border: "217.2 32.6% 17.5%",
@@ -39,9 +39,9 @@ export const darkTheme: Theme = {
     ring: "212.7 26.8% 83.9%",
 
     // Status colors
-    success: "142 76% 36%",
-    warning: "45 93% 47%",
-    info: "199 89% 48%",
+    success: "142 76% 46%",
+    warning: "38 92% 60%",
+    info: "199 89% 58%",
 
     // Nostr-specific colors
     zap: "45 93% 58%", // Gold/yellow for zaps

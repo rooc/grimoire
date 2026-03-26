@@ -1,5 +1,5 @@
 import type { NipNode } from "@/lib/nip-transformer";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { getNIPInfo } from "@/lib/nip-icons";
 
 interface NipNodeProps {
@@ -10,7 +10,7 @@ interface NipNodeProps {
  * Renders a NIP reference as a clickable link that opens the NIP viewer
  */
 export function Nip({ node }: NipNodeProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { number, raw } = node;
   const nipInfo = getNIPInfo(number);
 

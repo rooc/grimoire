@@ -16,13 +16,18 @@ import {
   Loader2,
   Inbox,
   Sparkles,
+  Send,
+  GitBranch,
   Link as LinkIcon,
   Check,
   Target,
+  List,
+  GalleryVertical,
 } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
+import { WindowInstance } from "@/types/app";
 import { useReqTimelineEnhanced } from "@/hooks/useReqTimelineEnhanced";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow, useGrimoire } from "@/core/state";
 import { useRelayState } from "@/hooks/useRelayState";
 import { useOutboxRelays } from "@/hooks/useOutboxRelays";
 import { AGGREGATOR_RELAYS } from "@/services/loaders";
@@ -59,7 +64,9 @@ import {
   AccordionTrigger,
 } from "./ui/accordion";
 import { RelayLink } from "./nostr/RelayLink";
+import type { Filter } from "nostr-tools";
 import type { NostrFilter } from "@/types/nostr";
+import type { RelaySelectionReasoning } from "@/types/relay-selection";
 import {
   formatEventIds,
   formatDTags,
@@ -80,7 +87,9 @@ import {
   shouldAnimate,
 } from "@/lib/req-state-machine";
 import { resolveFilterAliases, getTagValues } from "@/lib/nostr-utils";
-import { FilterSummaryBadges } from "./nostr/FilterSummaryBadges";
+import { chunkFiltersByRelay } from "@/lib/relay-filter-chunking";
+import { useStableRelayFilterMap } from "@/hooks/useStable";
+
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import { MemoizedCompactEventRow } from "./nostr/CompactEventRow";
 import type { ViewMode } from "@/lib/req-parser";
@@ -96,7 +105,7 @@ const MemoizedFeedEvent = memo(
  * Shows truncated ID with click to open
  */
 function EventIdPreview({ eventId }: { eventId: string }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   const handleClick = useCallback(() => {
     addWindow("open", { pointer: { id: eventId } });
@@ -113,10 +122,12 @@ function EventIdPreview({ eventId }: { eventId: string }) {
 }
 
 interface ReqViewerProps {
+  windowId: WindowInstance["id"];
   filter: NostrFilter;
   relays?: string[];
   closeOnEose?: boolean;
   view?: ViewMode;
+  follow?: boolean; // Auto-refresh mode (like tail -f)
   nip05Authors?: string[];
   nip05PTags?: string[];
   domainAuthors?: string[];
@@ -131,6 +142,8 @@ interface QueryDropdownProps {
   nip05PTags?: string[];
   domainAuthors?: string[];
   domainPTags?: string[];
+  relayFilterMap?: Record<string, Filter[]>;
+  relayReasoning?: RelaySelectionReasoning[];
 }
 
 function QueryDropdown({
@@ -138,6 +151,8 @@ function QueryDropdown({
   nip05Authors,
   domainAuthors,
   domainPTags,
+  relayFilterMap,
+  relayReasoning,
 }: QueryDropdownProps) {
   const { copy: handleCopy, copied } = useCopy();
 
@@ -187,29 +202,14 @@ function QueryDropdown({
     5;
 
   return (
-    <div className="border-b border-border px-4 py-3 bg-muted/30 space-y-3">
-      {/* Summary Header */}
-      <FilterSummaryBadges filter={filter} />
-
+    <div className="border-b border-border px-4 py-2 bg-muted/30 space-y-0.5">
       {isComplexQuery ? (
         /* Accordion for complex queries */
-        <Accordion
-          type="multiple"
-          defaultValue={[
-            "kinds",
-            "ids",
-            "authors",
-            "mentions",
-            "time",
-            "search",
-            "tags",
-          ]}
-          className="space-y-2"
-        >
+        <Accordion type="multiple" defaultValue={[]} className="space-y-0.5">
           {/* Kinds Section */}
           {filter.kinds && filter.kinds.length > 0 && (
             <AccordionItem value="kinds" className="border-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
+              <AccordionTrigger className="py-1 hover:no-underline">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <FileText className="size-3.5 text-muted-foreground" />
                   Kinds ({filter.kinds.length})
@@ -234,7 +234,7 @@ function QueryDropdown({
           {/* IDs Section (direct event lookup) */}
           {eventIds.length > 0 && (
             <AccordionItem value="ids" className="border-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
+              <AccordionTrigger className="py-1 hover:no-underline">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <Target className="size-3.5 text-muted-foreground" />
                   Event IDs ({eventIds.length})
@@ -263,7 +263,7 @@ function QueryDropdown({
           {/* Time Range Section */}
           {(filter.since || filter.until) && (
             <AccordionItem value="time" className="border-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
+              <AccordionTrigger className="py-1 hover:no-underline">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <Clock className="size-3.5 text-muted-foreground" />
                   Time Range
@@ -280,7 +280,7 @@ function QueryDropdown({
           {/* Search Section */}
           {filter.search && (
             <AccordionItem value="search" className="border-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
+              <AccordionTrigger className="py-1 hover:no-underline">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <Search className="size-3.5 text-muted-foreground" />
                   Search
@@ -299,7 +299,7 @@ function QueryDropdown({
           {/* Authors Section */}
           {authorPubkeys.length > 0 && (
             <AccordionItem value="authors" className="border-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
+              <AccordionTrigger className="py-1 hover:no-underline">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <User className="size-3.5 text-muted-foreground" />
                   Authors ({authorPubkeys.length})
@@ -352,7 +352,7 @@ function QueryDropdown({
           {/* Mentions Section */}
           {pTagPubkeys.length > 0 && (
             <AccordionItem value="mentions" className="border-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
+              <AccordionTrigger className="py-1 hover:no-underline">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <User className="size-3.5 text-muted-foreground" />
                   Mentions ({pTagPubkeys.length})
@@ -399,7 +399,7 @@ function QueryDropdown({
           {/* Tags Section */}
           {tagCount > 0 && (
             <AccordionItem value="tags" className="border-0">
-              <AccordionTrigger className="py-2 hover:no-underline">
+              <AccordionTrigger className="py-1 hover:no-underline">
                 <div className="flex items-center gap-2 text-xs font-semibold">
                   <Hash className="size-3.5 text-muted-foreground" />
                   Tags ({tagCount})
@@ -682,12 +682,128 @@ function QueryDropdown({
         </div>
       )}
 
+      {/* Per-Relay REQs (NIP-65) */}
+      {relayFilterMap && Object.keys(relayFilterMap).length > 0 && (
+        <Collapsible>
+          <CollapsibleTrigger className="flex flex-1 items-center gap-2 py-1 text-xs font-semibold w-full">
+            <GitBranch className="size-3.5 text-muted-foreground" />
+            REQs ({Object.keys(relayFilterMap).length})
+            <ChevronDown className="size-4 shrink-0 ml-auto text-muted-foreground transition-transform duration-200" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-1 pl-1">
+              {Object.entries(relayFilterMap).map(
+                ([relayUrl, relayFilters]) => {
+                  const reasoning = relayReasoning?.find(
+                    (r) => r.relay === relayUrl,
+                  );
+                  const isFallback = !!reasoning?.isFallback;
+
+                  // Use reasoning counts (assigned users) not raw filter counts
+                  // (which include unassigned users piggybacking on every relay)
+                  const assignedWriters = reasoning?.writers?.length || 0;
+                  const assignedReaders = reasoning?.readers?.length || 0;
+
+                  // Total in chunked filter for unassigned calculation
+                  const totalAuthors = relayFilters.reduce(
+                    (sum, f) => sum + (f.authors?.length || 0),
+                    0,
+                  );
+                  const totalPTags = relayFilters.reduce(
+                    (sum, f) => sum + (f["#p"]?.length || 0),
+                    0,
+                  );
+                  const unassignedAuthors = totalAuthors - assignedWriters;
+                  const unassignedPTags = totalPTags - assignedReaders;
+
+                  const relayJson = JSON.stringify(
+                    relayFilters.length === 1 ? relayFilters[0] : relayFilters,
+                    null,
+                    2,
+                  );
+
+                  return (
+                    <Collapsible key={relayUrl}>
+                      <CollapsibleTrigger className="flex items-center gap-1.5 text-xs w-full py-0.5 px-1 rounded hover:bg-muted/50 transition-colors min-w-0">
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                          <RelayLink url={relayUrl} showInboxOutbox={false} />
+                        </div>
+                        <div className="shrink-0 text-muted-foreground flex items-center gap-1.5 text-[10px]">
+                          {(assignedWriters > 0 ||
+                            (isFallback && totalAuthors > 0)) && (
+                            <span
+                              className="flex items-center gap-0.5"
+                              title={
+                                isFallback
+                                  ? `${totalAuthors} authors (fallback relay)`
+                                  : `${assignedWriters} assigned outbox writers${unassignedAuthors > 0 ? ` + ${unassignedAuthors} unassigned` : ""} (${totalAuthors} total in REQ)`
+                              }
+                            >
+                              <Send className="size-2.5" />
+                              {isFallback ? totalAuthors : assignedWriters}
+                              {!isFallback && unassignedAuthors > 0 && (
+                                <span className="text-muted-foreground/50">
+                                  +{unassignedAuthors}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          {(assignedReaders > 0 ||
+                            (isFallback && totalPTags > 0)) && (
+                            <span
+                              className="flex items-center gap-0.5"
+                              title={
+                                isFallback
+                                  ? `${totalPTags} mentions (fallback relay)`
+                                  : `${assignedReaders} assigned inbox readers${unassignedPTags > 0 ? ` + ${unassignedPTags} unassigned` : ""} (${totalPTags} total in REQ)`
+                              }
+                            >
+                              <Inbox className="size-2.5" />
+                              {isFallback ? totalPTags : assignedReaders}
+                              {!isFallback && unassignedPTags > 0 && (
+                                <span className="text-muted-foreground/50">
+                                  +{unassignedPTags}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          {isFallback && (
+                            <span className="bg-muted px-1 py-0.5 rounded font-medium">
+                              FB
+                            </span>
+                          )}
+                          <ChevronRight className="size-3 text-muted-foreground" />
+                        </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="relative ml-5 mt-1">
+                          <SyntaxHighlight
+                            code={relayJson}
+                            language="json"
+                            className="bg-muted/50 p-2 pr-10 overflow-x-auto border border-border/40 rounded text-[11px]"
+                          />
+                          <CodeCopyButton
+                            onCopy={() => handleCopy(relayJson)}
+                            copied={copied}
+                            label="Copy relay filter JSON"
+                          />
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                },
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* Raw Query - Always at bottom */}
       <Collapsible>
-        <CollapsibleTrigger className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full">
-          <Code className="size-3" />
+        <CollapsibleTrigger className="flex flex-1 items-center gap-2 py-1 text-xs font-semibold w-full">
+          <Code className="size-3.5 text-muted-foreground" />
           Raw Query JSON
-          <ChevronDown className="size-3 ml-auto" />
+          <ChevronDown className="size-4 shrink-0 ml-auto text-muted-foreground transition-transform duration-200" />
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="relative mt-2">
@@ -713,14 +829,17 @@ export default function ReqViewer({
   relays,
   closeOnEose = false,
   view = "list",
+  follow = false,
   nip05Authors,
   nip05PTags,
   domainAuthors,
   domainPTags,
   needsAccount = false,
   title = "nostr-events",
+  windowId = "pop-up",
 }: ReqViewerProps) {
-  const { state, addWindow } = useGrimoire();
+  const { state, updateWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { relays: relayStates } = useRelayState();
 
   // Get active account for alias resolution
@@ -762,22 +881,21 @@ export default function ReqViewer({
   // We just display the NIP-05 identifiers for user reference
 
   // NIP-65 outbox relay selection
-  // Memoize fallbackRelays to prevent re-creation on every render
-  const fallbackRelays = useMemo(
-    () =>
-      state.activeAccount?.relays?.filter((r) => r.read).map((r) => r.url) ||
-      AGGREGATOR_RELAYS,
-    [state.activeAccount?.relays],
-  );
+  // Fallback relays for follows without kind:10002 relay lists.
+  // Use AGGREGATOR_RELAYS (popular general relays), NOT the user's personal relays.
+  // The user's relays (both read and write) are specific to their network —
+  // assigning them as outbox for hundreds of unknown follows inflates counts
+  // and sends unnecessary queries to small/niche relays.
+  const fallbackRelays = AGGREGATOR_RELAYS;
 
-  // Memoize outbox options to prevent object re-creation
+  // Stable outbox options (fallbackRelays is a module constant)
   const outboxOptions = useMemo(
     () => ({
       fallbackRelays,
       timeout: 1000,
       maxRelays: 42,
     }),
-    [fallbackRelays],
+    [],
   );
 
   // Select optimal relays based on authors (write relays) and #p tags (read relays)
@@ -821,6 +939,15 @@ export default function ReqViewer({
   // Streaming is the default behavior, closeOnEose inverts it
   const stream = !closeOnEose;
 
+  // Per-relay filter chunking: only send relevant authors/#p to each relay
+  const relayFilterMap = useMemo(() => {
+    // Only chunk when using NIP-65 selection (not explicit relays)
+    if (relays || !reasoning?.length) return undefined;
+    return chunkFiltersByRelay(resolvedFilter, reasoning);
+  }, [relays, reasoning, resolvedFilter]);
+
+  const stableRelayFilterMap = useStableRelayFilterMap(relayFilterMap);
+
   const {
     events,
     loading,
@@ -832,9 +959,14 @@ export default function ReqViewer({
     `req-${JSON.stringify(filter)}-${closeOnEose}`,
     resolvedFilter,
     normalizedRelays,
-    { limit: resolvedFilter.limit || 50, stream },
+    {
+      limit: resolvedFilter.limit || 50,
+      stream,
+      relayFilterMap: stableRelayFilterMap,
+    },
   );
 
+  const [viewMode, setViewMode] = useState(view);
   const [showQuery, setShowQuery] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportFilename, setExportFilename] = useState("");
@@ -846,8 +978,11 @@ export default function ReqViewer({
   const [isFrozen, setIsFrozen] = useState(false);
   const virtuosoRef = useRef<any>(null);
 
-  // Freeze timeline after EOSE in streaming mode
+  // Freeze timeline after EOSE in streaming mode (skip if follow mode enabled)
   useEffect(() => {
+    // Don't freeze in follow mode - show events as they arrive
+    if (follow) return;
+
     // Freeze after EOSE in streaming mode
     if (eoseReceived && stream && !isFrozen && events.length > 0) {
       setFreezePoint(events[0].id);
@@ -859,7 +994,7 @@ export default function ReqViewer({
       setFreezePoint(null);
       setIsFrozen(false);
     }
-  }, [eoseReceived, stream, isFrozen, events]);
+  }, [follow, eoseReceived, stream, isFrozen, events]);
 
   // Filter events based on freeze point
   const { visibleEvents, newEventCount } = useMemo(() => {
@@ -998,6 +1133,34 @@ export default function ReqViewer({
     setExportProgress(0);
     setShowExportDialog(false);
   }, [events, exportFilename]);
+
+  const handleViewModeUpdate = () => {
+    const windowState = state.windows[windowId];
+    if (!windowState) return;
+
+    let { commandString } = windowState;
+
+    const newViewMode = viewMode == "compact" ? "list" : "compact";
+
+    if (commandString && commandString.indexOf("--view") > -1) {
+      if (newViewMode == "list") {
+        commandString = commandString.replace("--view compact", "--view list");
+      } else {
+        commandString = commandString.replace("--view list", "--view compact");
+      }
+    }
+
+    updateWindow(windowId, {
+      ...windowState,
+      commandString,
+      props: {
+        ...windowState.props,
+        view: newViewMode,
+      },
+    });
+
+    setViewMode(newViewMode);
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-background text-foreground">
@@ -1186,7 +1349,7 @@ export default function ReqViewer({
                                   Inbox (Read)
                                 </div>
                                 <div className="font-medium">
-                                  {nip65Info.readers.length} author
+                                  {nip65Info.readers.length} reader
                                   {nip65Info.readers.length !== 1 ? "s" : ""}
                                 </div>
                               </div>
@@ -1197,7 +1360,7 @@ export default function ReqViewer({
                                   Outbox (Write)
                                 </div>
                                 <div className="font-medium">
-                                  {nip65Info.writers.length} author
+                                  {nip65Info.writers.length} writer
                                   {nip65Info.writers.length !== 1 ? "s" : ""}
                                 </div>
                               </div>
@@ -1221,6 +1384,26 @@ export default function ReqViewer({
 
                           {/* Right side: compact status icons */}
                           <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {/* NIP-65 write/read counts */}
+                            {nip65Info && nip65Info.writers.length > 0 && (
+                              <div
+                                className="flex items-center gap-0.5 text-[10px] text-muted-foreground"
+                                title="outbox / write"
+                              >
+                                <Send className="size-2.5" />
+                                <span>{nip65Info.writers.length}</span>
+                              </div>
+                            )}
+                            {nip65Info && nip65Info.readers.length > 0 && (
+                              <div
+                                className="flex items-center gap-0.5 text-[10px] text-muted-foreground"
+                                title="inbox / read"
+                              >
+                                <Inbox className="size-2.5" />
+                                <span>{nip65Info.readers.length}</span>
+                              </div>
+                            )}
+
                             {/* Event count badge */}
                             {reqState && reqState.eventCount > 0 && (
                               <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
@@ -1301,6 +1484,23 @@ export default function ReqViewer({
             )}
             <FilterIcon className="size-3" />
           </button>
+
+          {/* ViewMode (Clickeable) */}
+          <button
+            onClick={() => {
+              handleViewModeUpdate();
+            }}
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={`click for ${viewMode == "list" ? "compact" : "list"} view`}
+            title={
+              viewMode == "list"
+                ? "Click to compact view"
+                : "Click to list view"
+            }
+          >
+            {viewMode == "list" && <List className="size-3" />}
+            {viewMode == "compact" && <GalleryVertical className="size-3" />}
+          </button>
         </div>
       </div>
 
@@ -1312,6 +1512,8 @@ export default function ReqViewer({
           nip05PTags={nip05PTags}
           domainAuthors={domainAuthors}
           domainPTags={domainPTags}
+          relayFilterMap={stableRelayFilterMap}
+          relayReasoning={reasoning}
         />
       )}
 
@@ -1343,8 +1545,8 @@ export default function ReqViewer({
       {/* Results */}
       {(!needsAccount || accountPubkey) && (
         <div className="flex-1 overflow-y-auto relative">
-          {/* Floating "New Events" Button */}
-          {isFrozen && newEventCount > 0 && (
+          {/* Floating "New Events" Button (hidden in follow mode) */}
+          {isFrozen && newEventCount > 0 && !follow && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
               <Button
                 onClick={handleUnfreeze}
@@ -1385,7 +1587,7 @@ export default function ReqViewer({
               data={visibleEvents}
               computeItemKey={(_index, item) => item.id}
               itemContent={(_index, event) =>
-                view === "compact" ? (
+                viewMode === "compact" ? (
                   <MemoizedCompactEventRow event={event} />
                 ) : (
                   <MemoizedFeedEvent event={event} />

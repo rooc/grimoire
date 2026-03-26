@@ -5,7 +5,7 @@ import { UserName } from "../UserName";
 import { MarkdownContent } from "../MarkdownContent";
 import { EmbeddedEvent } from "../EmbeddedEvent";
 import { RepositoryLink } from "../RepositoryLink";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { formatTimestamp } from "@/hooks/useLocale";
 import {
   getStatusRootEventId,
@@ -57,7 +57,7 @@ function getStatusBadgeClasses(kind: number): string {
  * Full view with status info, referenced event, and optional comment
  */
 export function IssueStatusDetailRenderer({ event }: { event: NostrEvent }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   const rootEventId = getStatusRootEventId(event);
   const relayHint = getStatusRootRelayHint(event);

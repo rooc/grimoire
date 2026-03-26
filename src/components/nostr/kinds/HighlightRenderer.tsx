@@ -9,7 +9,7 @@ import {
 } from "applesauce-common/helpers/highlight";
 import { UserName } from "../UserName";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { RichText } from "../RichText";
 import { getArticleTitle } from "applesauce-common/helpers/article";
 import { KindBadge } from "@/components/KindBadge";
@@ -20,7 +20,7 @@ import { KindBadge } from "@/components/KindBadge";
  * Note: All applesauce helpers cache internally, no useMemo needed
  */
 export function Kind9802Renderer({ event }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const highlightText = getHighlightText(event);
   const sourceUrl = getHighlightSourceUrl(event);
   const comment = getHighlightComment(event);

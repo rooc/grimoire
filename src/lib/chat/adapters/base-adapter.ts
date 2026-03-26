@@ -11,6 +11,7 @@ import type {
   CreateConversationParams,
 } from "@/types/chat";
 import type { NostrEvent } from "@/types/nostr";
+import type { EmojiTag } from "@/lib/emoji-helpers";
 import type {
   ChatAction,
   ChatActionContext,
@@ -71,7 +72,7 @@ export interface SendMessageOptions {
   /** Event ID being replied to */
   replyTo?: string;
   /** NIP-30 custom emoji tags */
-  emojiTags?: Array<{ shortcode: string; url: string }>;
+  emojiTags?: EmojiTag[];
   /** Blob attachments for imeta tags (NIP-92) */
   blobAttachments?: BlobAttachmentMeta[];
 }
@@ -168,7 +169,7 @@ export abstract class ChatProtocolAdapter {
     conversation: Conversation,
     messageId: string,
     emoji: string,
-    customEmoji?: { shortcode: string; url: string },
+    customEmoji?: EmojiTag,
   ): Promise<void>;
 
   /**

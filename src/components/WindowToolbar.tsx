@@ -7,6 +7,7 @@ import {
   CopyCheck,
   ArrowRightFromLine,
   ExternalLink,
+  Plus,
 } from "lucide-react";
 import { useSetAtom } from "jotai";
 import { useState } from "react";
@@ -44,22 +45,27 @@ export function WindowToolbar({
 }: WindowToolbarProps) {
   const setEditMode = useSetAtom(commandLauncherEditModeAtom);
   const [showSpellDialog, setShowSpellDialog] = useState(false);
-  const { state, moveWindowToWorkspace, setActiveWorkspace } = useGrimoire();
+  const { state, moveWindowToWorkspace, moveWindowToNewWorkspace } =
+    useGrimoire();
 
   // Get workspaces for move action
   const otherWorkspaces = Object.values(state.workspaces)
     .filter((ws) => ws.id !== state.activeWorkspaceId)
     .sort((a, b) => a.number - b.number);
-  const hasMultipleWorkspaces = Object.keys(state.workspaces).length > 1;
 
   const handleMoveToWorkspace = (targetWorkspaceId: string) => {
     if (!window) return;
     const targetWorkspace = state.workspaces[targetWorkspaceId];
     moveWindowToWorkspace(window.id, targetWorkspaceId);
-    setActiveWorkspace(targetWorkspaceId);
     toast.success(
       `Moved to tab ${targetWorkspace.number}${targetWorkspace.label ? ` (${targetWorkspace.label})` : ""}`,
     );
+  };
+
+  const handleMoveToNewTab = () => {
+    if (!window) return;
+    moveWindowToNewWorkspace(window.id);
+    toast.success("Moved to new tab");
   };
 
   const handleEdit = () => {
@@ -148,12 +154,12 @@ export function WindowToolbar({
           <Button
             variant="link"
             size="icon"
-            className="text-muted-foreground"
+            className="h-10 w-10 md:h-9 md:w-9 text-muted-foreground"
             onClick={handleEdit}
             title="Edit command"
             aria-label="Edit command"
           >
-            <Pencil className="size-4" />
+            <Pencil className="size-5 md:size-4" />
           </Button>
 
           {/* Copy button for NIPs */}
@@ -161,13 +167,17 @@ export function WindowToolbar({
             <Button
               variant="link"
               size="icon"
-              className="text-muted-foreground"
+              className="h-10 w-10 md:h-9 md:w-9 text-muted-foreground"
               onClick={handleCopyNip}
               title="Copy NIP markdown"
               aria-label="Copy NIP markdown"
               disabled={!nipContent}
             >
-              {copied ? <CopyCheck /> : <Copy />}
+              {copied ? (
+                <CopyCheck className="size-5 md:size-4" />
+              ) : (
+                <Copy className="size-5 md:size-4" />
+              )}
             </Button>
           )}
 
@@ -177,11 +187,11 @@ export function WindowToolbar({
               <Button
                 variant="link"
                 size="icon"
-                className="text-muted-foreground"
+                className="h-10 w-10 md:h-9 md:w-9 text-muted-foreground"
                 title="More actions"
                 aria-label="More actions"
               >
-                <MoreVertical className="size-4" />
+                <MoreVertical className="size-5 md:size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -191,31 +201,30 @@ export function WindowToolbar({
                 Pop out window
               </DropdownMenuItem>
 
-              {/* Move to tab submenu - only show if multiple workspaces */}
-              {hasMultipleWorkspaces && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger
-                      disabled={otherWorkspaces.length === 0}
+              {/* Move to tab submenu */}
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <ArrowRightFromLine className="size-4 mr-2" />
+                  Move to tab
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={handleMoveToNewTab}>
+                    <Plus className="size-4 mr-2" />
+                    New
+                  </DropdownMenuItem>
+                  {otherWorkspaces.length > 0 && <DropdownMenuSeparator />}
+                  {otherWorkspaces.map((ws) => (
+                    <DropdownMenuItem
+                      key={ws.id}
+                      onClick={() => handleMoveToWorkspace(ws.id)}
                     >
-                      <ArrowRightFromLine className="size-4 mr-2" />
-                      Move to tab
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      {otherWorkspaces.map((ws) => (
-                        <DropdownMenuItem
-                          key={ws.id}
-                          onClick={() => handleMoveToWorkspace(ws.id)}
-                        >
-                          {ws.number}
-                          {ws.label ? ` ${ws.label}` : ""}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                </>
-              )}
+                      {ws.number}
+                      {ws.label ? ` ${ws.label}` : ""}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
 
               {/* REQ/COUNT-specific actions */}
               {isSpellableWindow && (
@@ -248,12 +257,12 @@ export function WindowToolbar({
         <Button
           variant="link"
           size="icon"
-          className="text-muted-foreground"
+          className="h-10 w-10 md:h-9 md:w-9 text-muted-foreground"
           onClick={onClose}
           title="Close window"
           aria-label="Close window"
         >
-          <X className="size-4" />
+          <X className="size-5 md:size-4" />
         </Button>
       )}
     </>

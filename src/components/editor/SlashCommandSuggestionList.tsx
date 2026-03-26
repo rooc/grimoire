@@ -69,19 +69,13 @@ export const SlashCommandSuggestionList = forwardRef<
     setSelectedIndex(0);
   }, [items]);
 
-  if (items.length === 0) {
-    return (
-      <div className="border border-border/50 bg-popover p-4 text-sm text-muted-foreground shadow-md">
-        No commands available
-      </div>
-    );
-  }
+  if (items.length === 0) return null;
 
   return (
     <div
       ref={listRef}
       role="listbox"
-      className="max-h-[300px] w-[320px] overflow-y-auto border border-border/50 bg-popover shadow-md"
+      className="max-h-[300px] w-full max-w-[320px] overflow-y-auto rounded-md border border-border/50 bg-popover text-popover-foreground shadow-md"
     >
       {items.map((item, index) => (
         <button
@@ -90,11 +84,11 @@ export const SlashCommandSuggestionList = forwardRef<
           aria-selected={index === selectedIndex}
           onClick={() => command(item)}
           onMouseEnter={() => setSelectedIndex(index)}
-          className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
+          className={`flex w-full items-center gap-3 px-3 py-3 md:py-2 min-h-[44px] text-left transition-colors ${
             index === selectedIndex ? "bg-muted/60" : "hover:bg-muted/60"
           }`}
         >
-          <Terminal className="size-4 flex-shrink-0 text-muted-foreground" />
+          <Terminal className="size-5 md:size-4 flex-shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-medium font-mono">
               /{item.name}

@@ -31,7 +31,7 @@ import type { LocalSpell } from "@/services/db";
 import { ExecutableCommand } from "./ManPage";
 import { PublishSpellAction } from "@/actions/publish-spell";
 import { DeleteEventAction } from "@/actions/delete-event";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow, useGrimoire } from "@/core/state";
 import { cn } from "@/lib/utils";
 import { KindBadge } from "@/components/KindBadge";
 import { parseReqCommand } from "@/lib/req-parser";
@@ -47,7 +47,7 @@ interface SpellCardProps {
 }
 
 function SpellCard({ spell, onDelete, onPublish }: SpellCardProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const displayName = spell.name || spell.alias || "Untitled Spell";

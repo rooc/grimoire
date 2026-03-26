@@ -1,5 +1,10 @@
-import { Observable, firstValueFrom } from "rxjs";
-import { map, first, toArray } from "rxjs/operators";
+import {
+  Observable,
+  firstValueFrom,
+  combineLatest,
+  BehaviorSubject,
+} from "rxjs";
+import { map, first, toArray, filter as filterOp } from "rxjs/operators";
 import type { Filter } from "nostr-tools";
 import { nip19 } from "nostr-tools";
 import type { EventPointer, AddressPointer } from "nostr-tools/nip19";
@@ -18,6 +23,7 @@ import type {
   ParticipantRole,
 } from "@/types/chat";
 import type { NostrEvent } from "@/types/nostr";
+import type { EmojiTag } from "@/lib/emoji-helpers";
 import eventStore from "@/services/event-store";
 import pool from "@/services/relay-pool";
 import { publishEventToRelays } from "@/services/hub";
@@ -37,7 +43,7 @@ import {
   isValidZap,
 } from "applesauce-common/helpers/zap";
 import { EventFactory } from "applesauce-core/event-factory";
-import { ReactionBlueprint } from "applesauce-common/blueprints";
+import { ReactionBlueprint } from "@/lib/blueprints";
 
 /**
  * NIP-53 Adapter - Live Activity Chat
@@ -107,10 +113,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
       throw new Error("No active account");
     }
 
-    console.log(
-      `[NIP-53] Fetching live activity ${dTag} by ${pubkey.slice(0, 8)}...`,
-    );
-
     // Use author's outbox relays plus any relay hints
     const authorOutboxes = await this.getAuthorOutboxes(pubkey);
     const relays = [...new Set([...relayHints, ...authorOutboxes])];
@@ -118,8 +120,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     if (relays.length === 0) {
       throw new Error("No relays available to fetch live activity");
     }
-
-    console.log(`[NIP-53] Using relays: ${relays.join(", ")}`);
 
     // Fetch the kind 30311 live activity event
     const activityFilter: Filter = {
@@ -136,7 +136,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
 
     await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        console.log("[NIP-53] Activity fetch timeout");
         resolve();
       }, 5000);
 
@@ -145,9 +144,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
           if (typeof response === "string") {
             // EOSE received
             clearTimeout(timeout);
-            console.log(
-              `[NIP-53] Got ${activityEvents.length} activity events`,
-            );
             sub.unsubscribe();
             resolve();
           } else {
@@ -190,10 +186,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     const chatRelays = [
       ...new Set([...activity.relays, ...relayHints, ...authorOutboxes]),
     ];
-
-    console.log(
-      `[NIP-53] Resolved: "${activity.title}" (${status}), ${participants.length} participants, ${chatRelays.length} relays`,
-    );
 
     return {
       id: `nip-53:${pubkey}:${dTag}`,
@@ -265,10 +257,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
       throw new Error("No relays available for live chat");
     }
 
-    console.log(
-      `[NIP-53] Loading messages for ${aTagValue} from ${relays.length} relays`,
-    );
-
     // Single filter for live chat messages (kind 1311) and zaps (kind 9735)
     const filter: Filter = {
       kinds: [1311, 9735],
@@ -286,6 +274,9 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     // Clean up any existing subscription for this conversation
     this.cleanup(conversation.id);
 
+    // Track EOSE state - don't emit until initial batch is loaded
+    const eoseReceived$ = new BehaviorSubject<boolean>(false);
+
     // Start a persistent subscription to the relays
     const subscription = pool
       .subscription(relays, [filter], {
@@ -294,11 +285,7 @@ export class Nip53Adapter extends ChatProtocolAdapter {
       .subscribe({
         next: (response) => {
           if (typeof response === "string") {
-            console.log("[NIP-53] EOSE received");
-          } else {
-            console.log(
-              `[NIP-53] Received event k${response.kind}: ${response.id.slice(0, 8)}...`,
-            );
+            eoseReceived$.next(true);
           }
         },
       });
@@ -306,9 +293,10 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     // Store subscription for cleanup
     this.subscriptions.set(conversation.id, subscription);
 
-    // Return observable from EventStore which will update automatically
-    return eventStore.timeline(filter).pipe(
-      map((events) => {
+    // Return observable that only emits after EOSE (prevents partial renders during initial load)
+    return combineLatest([eventStore.timeline(filter), eoseReceived$]).pipe(
+      filterOp(([, eose]) => eose), // Only emit after EOSE received
+      map(([events]) => {
         const messages = events
           .map((event) => {
             // Convert zaps (kind 9735) using zapToMessage
@@ -322,7 +310,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
           })
           .filter((msg): msg is Message => msg !== null);
 
-        console.log(`[NIP-53] Timeline has ${messages.length} events`);
         // EventStore timeline returns events sorted by created_at desc,
         // we need ascending order for chat. Since it's already sorted,
         // just reverse instead of full sort (O(n) vs O(n log n))
@@ -365,10 +352,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
       throw new Error("No relays available for live chat");
     }
 
-    console.log(
-      `[NIP-53] Loading older messages for ${aTagValue} before ${before}`,
-    );
-
     // Same filter as loadMessages but with until for pagination
     const filter: Filter = {
       kinds: [1311, 9735],
@@ -381,8 +364,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     const events = await firstValueFrom(
       pool.request(relays, [filter], { eventStore }).pipe(toArray()),
     );
-
-    console.log(`[NIP-53] Loaded ${events.length} older events`);
 
     // Convert events to messages
     const messages = events
@@ -456,7 +437,11 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     // Add NIP-30 emoji tags
     if (options?.emojiTags) {
       for (const emoji of options.emojiTags) {
-        tags.push(["emoji", emoji.shortcode, emoji.url]);
+        tags.push(
+          emoji.address
+            ? ["emoji", emoji.shortcode, emoji.url, emoji.address]
+            : ["emoji", emoji.shortcode, emoji.url],
+        );
       }
     }
 
@@ -486,7 +471,7 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     conversation: Conversation,
     messageId: string,
     emoji: string,
-    customEmoji?: { shortcode: string; url: string },
+    customEmoji?: EmojiTag,
   ): Promise<void> {
     const activePubkey = accountManager.active$.value?.pubkey;
     const activeSigner = accountManager.active$.value?.signer;
@@ -535,9 +520,7 @@ export class Nip53Adapter extends ChatProtocolAdapter {
     factory.setSigner(activeSigner);
 
     // Use ReactionBlueprint - auto-handles e-tag, k-tag, p-tag, custom emoji
-    const emojiArg = customEmoji
-      ? { shortcode: customEmoji.shortcode, url: customEmoji.url }
-      : emoji;
+    const emojiArg = customEmoji ?? emoji;
 
     const draft = await factory.create(
       ReactionBlueprint,
@@ -680,10 +663,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
       return null;
     }
 
-    console.log(
-      `[NIP-53] Fetching reply message ${eventId.slice(0, 8)}... from ${relays.length} relays`,
-    );
-
     const filter: Filter = {
       ids: [eventId],
       limit: 1,
@@ -694,9 +673,6 @@ export class Nip53Adapter extends ChatProtocolAdapter {
 
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => {
-        console.log(
-          `[NIP-53] Reply message fetch timeout for ${eventId.slice(0, 8)}...`,
-        );
         resolve();
       }, 3000);
 

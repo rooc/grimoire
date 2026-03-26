@@ -10,7 +10,7 @@ import {
 } from "applesauce-common/helpers/highlight";
 import { EmbeddedEvent } from "../EmbeddedEvent";
 import { UserName } from "../UserName";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { formatTimestamp } from "@/hooks/useLocale";
 import { RichText } from "../RichText";
 
@@ -20,7 +20,7 @@ import { RichText } from "../RichText";
  * Note: All applesauce helpers cache internally, no useMemo needed
  */
 export function Kind9802DetailRenderer({ event }: { event: NostrEvent }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const highlightText = getHighlightText(event);
   const comment = getHighlightComment(event);
   const context = getHighlightContext(event);

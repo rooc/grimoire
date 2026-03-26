@@ -326,6 +326,7 @@ This allows `applyTheme()` to switch themes at runtime.
 - **Path Alias**: `@/` = `./src/`
 - **Styling**: Tailwind v4 + HSL CSS variables (theme tokens defined in `index.css`)
 - **Types**: Prefer types from `applesauce-core`, extend in `src/types/` when needed
+- **No Inline Imports**: Never use `import("module").Type` in type annotations. Always use top-level `import type` statements.
 - **Locale-Aware Formatting** (`src/hooks/useLocale.ts`): All date, time, number, and currency formatting MUST use the user's locale:
   - **`useLocale()` hook**: Returns `{ locale, language, region, timezone, timeFormat }` - use in components that need locale config
   - **`formatTimestamp(timestamp, style)`**: Preferred utility for all timestamp formatting:
@@ -340,6 +341,13 @@ This allows `applyTheme()` to switch themes at runtime.
   - Example: `formatTimestamp(event.created_at, "long")` instead of manual `toLocaleDateString()`
 - **File Organization**: By domain (`nostr/`, `ui/`, `services/`, `hooks/`, `lib/`)
 - **State Logic**: All UI state mutations go through `src/core/logic.ts` pure functions
+- **Shared Components** — Use these instead of rolling your own:
+  - **`UserName`** (`src/components/nostr/UserName.tsx`): Always use for displaying user pubkeys. Shows display name, Grimoire member badge, supporter flame. Clicking opens profile. Accepts optional `relayHints` prop for fetching profiles from specific relays.
+  - **`RelayLink`** (`src/components/nostr/RelayLink.tsx`): Always use for displaying relay URLs. Shows relay favicon, insecure `ws://` warnings, read/write badges, and opens relay detail window on click. Never render raw relay URL strings.
+  - **`Label`** (`src/components/ui/label.tsx`): Dotted-border tag/badge for metadata labels (language, kind, status, metric type). Two sizes: `sm` (default) and `md`. Use instead of ad-hoc `<span>` tags for tag-like indicators.
+  - **`RichText`** (`src/components/nostr/RichText.tsx`): Universal Nostr content renderer. Parses mentions, hashtags, custom emoji, media embeds, and nostr: references. Use for any event body text — never render `event.content` as a raw string.
+  - **`CustomEmoji`** (`src/components/nostr/CustomEmoji.tsx`): Renders NIP-30 custom emoji images inline. Shows shortcode tooltip, handles load errors gracefully.
+  - **`Timestamp`** (`src/components/Timestamp.tsx`): Locale-aware short time display (e.g., "2:30 PM" or "14:30"). Takes a Unix timestamp in seconds. Use for inline time rendering in chat messages, lists, and log entries. For other formats (relative, date, datetime), use `formatTimestamp()` from `src/hooks/useLocale.ts`.
 
 ## Important Patterns
 
@@ -374,6 +382,11 @@ This allows `applyTheme()` to switch themes at runtime.
 - Prevents one broken event from crashing entire feed or detail view
 - Provides diagnostic UI with retry capability and error details
 - Error boundaries auto-reset when event changes
+
+**Shared Badge Components**:
+- **`KindBadge`** (`src/components/KindBadge.tsx`): Displays a Nostr event kind with icon, name, and kind number. Uses `getKindInfo()` from `src/constants/kinds.ts`. Variants: `"default"` (icon + name), `"compact"` (icon only), `"full"` (icon + name + kind number). Supports `clickable` prop to open kind detail window.
+- **`NIPBadge`** (`src/components/NIPBadge.tsx`): Displays a NIP reference with number and optional name. Clickable to open the NIP document in a new window. Shows deprecation state. Props: `nipNumber`, `showName`, `showNIPPrefix`.
+- Use these components whenever displaying kind numbers or NIP references in the UI — they provide consistent styling, tooltips, and navigation.
 
 ## Chat System
 
@@ -469,7 +482,7 @@ Use these commands for common workflows:
 - `/test` - Run tests and report results
 - `/lint-fix` - Auto-fix lint and formatting issues
 - `/commit-push-pr` - Create a commit and PR with proper formatting
-- `/review` - Review changes for quality and Nostr best practices
+- `/review [PR#|branch]` - Deep code review with React, Applesauce, RxJS, and Nostr best practices
 
 ## Critical Notes
 

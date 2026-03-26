@@ -25,6 +25,7 @@ export type AppId =
   | "zap"
   | "post"
   | "settings"
+  | "log"
   | "win";
 
 export interface WindowInstance {
@@ -100,6 +101,7 @@ export interface NWCConnection {
   /** Optional wallet info */
   info?: {
     alias?: string;
+    network?: string;
     methods?: string[];
     notifications?: string[];
   };
@@ -118,7 +120,6 @@ export interface GrimoireState {
     relays?: RelayInfo[];
     blossomServers?: string[];
   };
-  compactModeKinds?: number[];
   locale?: {
     locale: string;
     language: string;

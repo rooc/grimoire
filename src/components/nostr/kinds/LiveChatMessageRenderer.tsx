@@ -6,7 +6,7 @@ import { parseReplaceableAddress } from "applesauce-core/helpers/pointers";
 import { getDisplayName } from "@/lib/nostr-utils";
 import { useProfile } from "@/hooks/useProfile";
 import { Video } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 
 /**
  * Renderer for Kind 1311 - Live Chat Message (NIP-53)
@@ -14,7 +14,7 @@ import { useGrimoire } from "@/core/state";
  * and a link to the original live activity
  */
 export function LiveChatMessageRenderer({ event, depth = 0 }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   // Get the 'a' tag pointing to the live activity (kind 30311)
   const aTag = event.tags.find((tag) => tag[0] === "a");

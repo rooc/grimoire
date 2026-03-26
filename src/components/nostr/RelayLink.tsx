@@ -1,5 +1,5 @@
 import { Inbox, Send, ShieldAlert } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { useRelayInfo } from "@/hooks/useRelayInfo";
 import {
   HoverCard,
@@ -50,7 +50,7 @@ export function RelayLink({
   className,
   variant = "default",
 }: RelayLinkProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const relayInfo = useRelayInfo(url);
 
   const handleClick = () => {
@@ -110,8 +110,11 @@ export function RelayLink({
             </HoverCardContent>
           </HoverCard>
         )}
-        <span className={cn("text-xs truncate", urlClassname)}>
-          {displayUrl}
+        <span
+          className={cn("text-xs truncate", urlClassname)}
+          title={displayUrl}
+        >
+          {relayInfo?.name || displayUrl}
         </span>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">

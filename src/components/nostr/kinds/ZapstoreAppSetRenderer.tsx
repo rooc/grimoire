@@ -9,7 +9,7 @@ import {
   getAppName,
 } from "@/lib/zapstore-helpers";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { Package } from "lucide-react";
 
 function AppItem({
@@ -17,7 +17,7 @@ function AppItem({
 }: {
   address: { kind: number; pubkey: string; identifier: string };
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const appEvent = useNostrEvent(address);
   const appName = appEvent
     ? getAppName(appEvent)

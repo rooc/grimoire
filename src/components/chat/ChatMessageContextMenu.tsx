@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/context-menu";
 import {
   Copy,
-  Check,
+  CopyCheck,
   FileJson,
   ExternalLink,
   Reply,
@@ -20,7 +20,7 @@ import {
   Smile,
   Zap,
 } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { useCopy } from "@/hooks/useCopy";
 import { JsonViewer } from "@/components/JsonViewer";
 import { KindBadge } from "@/components/KindBadge";
@@ -59,7 +59,7 @@ export function ChatMessageContextMenu({
   adapter,
   message,
 }: ChatMessageContextMenuProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -212,7 +212,7 @@ export function ChatMessageContextMenu({
           </ContextMenuItem>
           <ContextMenuItem onClick={copyEventId}>
             {copied ? (
-              <Check className="size-4 mr-2 text-green-500" />
+              <CopyCheck className="size-4 mr-2 text-success" />
             ) : (
               <Copy className="size-4 mr-2" />
             )}

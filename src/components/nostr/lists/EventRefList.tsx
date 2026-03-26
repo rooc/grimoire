@@ -1,5 +1,5 @@
 import { FileText, ExternalLink } from "lucide-react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { cn } from "@/lib/utils";
 import { EmbeddedEvent } from "../EmbeddedEvent";
 import type { EventPointer, AddressPointer } from "nostr-tools/nip19";
@@ -59,7 +59,7 @@ export function EventRefItem({
   eventPointer,
   addressPointer,
 }: EventRefItemProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   const handleClick = () => {
     if (eventPointer) {

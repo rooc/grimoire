@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { manPages } from "@/types/man";
 import { AppId } from "@/types/app";
 
@@ -21,7 +21,7 @@ export default function Command({
   commandLine,
 }: CommandProps) {
   const [showTooltip, setShowTooltip] = useState(false);
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   const handleClick = async () => {
     if (commandLine) {

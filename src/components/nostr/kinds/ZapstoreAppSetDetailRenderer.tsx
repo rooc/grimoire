@@ -9,7 +9,7 @@ import {
   getCurationSetIdentifier,
 } from "@/lib/zapstore-helpers";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { UserName } from "../UserName";
 import { Package } from "lucide-react";
 import { PlatformIcon } from "./zapstore/PlatformIcon";
@@ -26,7 +26,7 @@ function AppCard({
 }: {
   address: { kind: number; pubkey: string; identifier: string };
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const appEvent = useNostrEvent(address);
 
   if (!appEvent) {

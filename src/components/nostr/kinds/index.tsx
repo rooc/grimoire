@@ -34,6 +34,10 @@ import {
 } from "./BlossomServerListRenderer";
 import { Kind10317Renderer } from "./GraspListRenderer";
 import { Kind10317DetailRenderer } from "./GraspListDetailRenderer";
+import {
+  FavoriteSpellsRenderer,
+  FavoriteSpellsDetailRenderer,
+} from "./FavoriteSpellsRenderer";
 import { Kind30023Renderer } from "./ArticleRenderer";
 import { Kind30023DetailRenderer } from "./ArticleDetailRenderer";
 import { CommunityNIPRenderer } from "./CommunityNIPRenderer";
@@ -160,6 +164,18 @@ import { PollRenderer } from "./PollRenderer";
 import { PollDetailRenderer } from "./PollDetailRenderer";
 import { PollResponseRenderer } from "./PollResponseRenderer";
 import { ReportRenderer, ReportDetailRenderer } from "./ReportRenderer";
+import { ThreadRenderer } from "./ThreadRenderer";
+import { TrustedAssertionRenderer } from "./TrustedAssertionRenderer";
+import { TrustedAssertionDetailRenderer } from "./TrustedAssertionDetailRenderer";
+import { TrustedProviderListRenderer } from "./TrustedProviderListRenderer";
+import { TrustedProviderListDetailRenderer } from "./TrustedProviderListDetailRenderer";
+import {
+  MusicTrackRenderer,
+  MusicTrackDetailRenderer,
+} from "./MusicTrackRenderer";
+import { PlaylistRenderer, PlaylistDetailRenderer } from "./PlaylistRenderer";
+import { EducationalResourceRenderer } from "./EducationalResourceRenderer";
+import { EducationalResourceDetailRenderer } from "./EducationalResourceDetailRenderer";
 
 /**
  * Registry of kind-specific renderers
@@ -172,8 +188,8 @@ const kindRenderers: Record<number, React.ComponentType<BaseEventProps>> = {
   6: RepostRenderer, // Repost
   7: Kind7Renderer, // Reaction
   8: BadgeAwardRenderer, // Badge Award (NIP-58)
-  9: Kind9Renderer, // Chat Message (NIP-C7)
-  11: Kind1Renderer, // Public Thread Reply (NIP-10)
+  9: Kind9Renderer, // Chat Message (NIP-29)
+  11: ThreadRenderer, // Thread (NIP-7D)
   16: RepostRenderer, // Generic Repost
   17: Kind7Renderer, // Reaction (NIP-25)
   20: Kind20Renderer, // Picture (NIP-68)
@@ -214,12 +230,15 @@ const kindRenderers: Record<number, React.ComponentType<BaseEventProps>> = {
   10015: InterestListRenderer, // Interest List (NIP-51)
   10020: MediaFollowListRenderer, // Media Follow List (NIP-51)
   10030: EmojiListRenderer, // User Emoji List (NIP-51)
+  10040: TrustedProviderListRenderer, // Trusted Provider List (NIP-85)
   10050: GenericRelayListRenderer, // DM Relay List (NIP-51)
+  10051: GenericRelayListRenderer, // KeyPackage Relays (NIP-EE)
   10063: BlossomServerListRenderer, // Blossom User Server List (BUD-03)
   10101: WikiAuthorsRenderer, // Good Wiki Authors (NIP-51)
   10102: WikiRelaysRenderer, // Good Wiki Relays (NIP-51)
   10166: MonitorAnnouncementRenderer, // Relay Monitor Announcement (NIP-66)
   10317: Kind10317Renderer, // User Grasp List (NIP-34)
+  10777: FavoriteSpellsRenderer, // Favorite Spells (Grimoire)
   13534: RelayMembersRenderer, // Relay Members (NIP-43)
   30000: FollowSetRenderer, // Follow Sets (NIP-51)
   30002: GenericRelayListRenderer, // Relay Sets (NIP-51)
@@ -234,11 +253,18 @@ const kindRenderers: Record<number, React.ComponentType<BaseEventProps>> = {
   30023: Kind30023Renderer, // Long-form Article
   30030: EmojiSetRenderer, // Emoji Sets (NIP-30)
   30063: ZapstoreReleaseRenderer, // Zapstore App Release
+  30142: EducationalResourceRenderer, // Educational Resource (AMB)
   30166: RelayDiscoveryRenderer, // Relay Discovery (NIP-66)
   30267: ZapstoreAppSetRenderer, // Zapstore App Collection
   30311: LiveActivityRenderer, // Live Streaming Event (NIP-53)
+  30382: TrustedAssertionRenderer, // User Assertion (NIP-85)
+  30383: TrustedAssertionRenderer, // Event Assertion (NIP-85)
+  30384: TrustedAssertionRenderer, // Address Assertion (NIP-85)
+  30385: TrustedAssertionRenderer, // External Assertion (NIP-85)
+  34139: PlaylistRenderer, // Music Playlist
   34235: Kind21Renderer, // Horizontal Video (NIP-71 legacy)
   34236: Kind22Renderer, // Vertical Video (NIP-71 legacy)
+  36787: MusicTrackRenderer, // Music Track
   30617: RepositoryRenderer, // Repository (NIP-34)
   30618: RepositoryStateRenderer, // Repository State (NIP-34)
   30777: SpellbookRenderer, // Spellbook (Grimoire)
@@ -320,6 +346,7 @@ const detailRenderers: Record<
   10004: CommunityListDetailRenderer, // Community List Detail (NIP-51)
   10005: ChannelListDetailRenderer, // Channel List Detail (NIP-51)
   10015: InterestListDetailRenderer, // Interest List Detail (NIP-51)
+  10040: TrustedProviderListDetailRenderer, // Trusted Provider List Detail (NIP-85)
   10020: MediaFollowListDetailRenderer, // Media Follow List Detail (NIP-51)
   10030: EmojiListDetailRenderer, // User Emoji List Detail (NIP-51)
   10063: BlossomServerListDetailRenderer, // Blossom User Server List Detail (BUD-03)
@@ -327,6 +354,7 @@ const detailRenderers: Record<
   10102: WikiRelaysDetailRenderer, // Good Wiki Relays Detail (NIP-51)
   10166: MonitorAnnouncementDetailRenderer, // Relay Monitor Announcement Detail (NIP-66)
   10317: Kind10317DetailRenderer, // User Grasp List Detail (NIP-34)
+  10777: FavoriteSpellsDetailRenderer, // Favorite Spells Detail (Grimoire)
   13534: RelayMembersDetailRenderer, // Relay Members Detail (NIP-43)
   30000: FollowSetDetailRenderer, // Follow Sets Detail (NIP-51)
   30003: BookmarkSetDetailRenderer, // Bookmark Sets Detail (NIP-51)
@@ -340,9 +368,14 @@ const detailRenderers: Record<
   30023: Kind30023DetailRenderer, // Long-form Article Detail
   30030: EmojiSetDetailRenderer, // Emoji Sets Detail (NIP-30)
   30063: ZapstoreReleaseDetailRenderer, // Zapstore App Release Detail
+  30142: EducationalResourceDetailRenderer, // Educational Resource Detail (AMB)
   30166: RelayDiscoveryDetailRenderer, // Relay Discovery Detail (NIP-66)
   30267: ZapstoreAppSetDetailRenderer, // Zapstore App Collection Detail
   30311: LiveActivityDetailRenderer, // Live Streaming Event Detail (NIP-53)
+  30382: TrustedAssertionDetailRenderer, // User Assertion Detail (NIP-85)
+  30383: TrustedAssertionDetailRenderer, // Event Assertion Detail (NIP-85)
+  30384: TrustedAssertionDetailRenderer, // Address Assertion Detail (NIP-85)
+  30385: TrustedAssertionDetailRenderer, // External Assertion Detail (NIP-85)
   30617: RepositoryDetailRenderer, // Repository Detail (NIP-34)
   30618: RepositoryStateDetailRenderer, // Repository State Detail (NIP-34)
   30777: SpellbookDetailRenderer, // Spellbook Detail (Grimoire)
@@ -352,6 +385,8 @@ const detailRenderers: Record<
   31989: HandlerRecommendationDetailRenderer, // Handler Recommendation Detail (NIP-89)
   31990: ApplicationHandlerDetailRenderer, // Application Handler Detail (NIP-89)
   32267: ZapstoreAppDetailRenderer, // Zapstore App Detail
+  34139: PlaylistDetailRenderer, // Music Playlist Detail
+  36787: MusicTrackDetailRenderer, // Music Track Detail
   38383: P2pOrderDetailRenderer, // P2P Order Detail
   39089: StarterPackDetailRenderer, // Starter Pack Detail (NIP-51)
   39092: MediaStarterPackDetailRenderer, // Media Starter Pack Detail (NIP-51)

@@ -53,6 +53,9 @@ const PostViewer = lazy(() =>
 const SettingsViewer = lazy(() =>
   import("./SettingsViewer").then((m) => ({ default: m.SettingsViewer })),
 );
+const EventLogViewer = lazy(() =>
+  import("./EventLogViewer").then((m) => ({ default: m.EventLogViewer })),
+);
 
 // Loading fallback component
 function ViewerLoading() {
@@ -158,10 +161,12 @@ export function WindowRenderer({ window, onClose }: WindowRendererProps) {
       case "req":
         content = (
           <ReqViewer
+            windowId={window.id}
             filter={window.props.filter}
             relays={window.props.relays}
             closeOnEose={window.props.closeOnEose}
             view={window.props.view}
+            follow={window.props.follow}
             nip05Authors={window.props.nip05Authors}
             nip05PTags={window.props.nip05PTags}
             domainAuthors={window.props.domainAuthors}
@@ -229,6 +234,8 @@ export function WindowRenderer({ window, onClose }: WindowRendererProps) {
             sourceUrl={window.props.sourceUrl}
             targetServer={window.props.targetServer}
             sha256={window.props.sha256}
+            blobUrl={window.props.blobUrl}
+            mediaType={window.props.mediaType}
           />
         );
         break;
@@ -252,6 +259,9 @@ export function WindowRenderer({ window, onClose }: WindowRendererProps) {
         break;
       case "settings":
         content = <SettingsViewer />;
+        break;
+      case "log":
+        content = <EventLogViewer />;
         break;
       default:
         content = (

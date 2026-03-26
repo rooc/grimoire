@@ -6,7 +6,7 @@ import {
 import { EmbeddedEvent } from "../EmbeddedEvent";
 import { StatusIndicator } from "../StatusIndicator";
 import { MarkdownContent } from "../MarkdownContent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import {
   getStatusRootEventId,
   getStatusRootRelayHint,
@@ -18,7 +18,7 @@ import type { EventPointer } from "nostr-tools/nip19";
  * Displays status action with embedded reference to the issue/patch/PR
  */
 export function IssueStatusRenderer({ event }: BaseEventProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
 
   const rootEventId = getStatusRootEventId(event);
   const relayHint = getStatusRootRelayHint(event);

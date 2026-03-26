@@ -1,8 +1,8 @@
 /* Tailwind CSS v4 - CSS-first configuration */
 @import "tailwindcss";
 
-/* Prism syntax highlighting theme */
-@import "./styles/prism-theme.css";
+/* Shiki syntax highlighting theme */
+@import "./styles/shiki-theme.css";
 
 /* ==========================================================================
    Theme Configuration (@theme)
@@ -164,6 +164,8 @@
   --syntax-function: 222.2 47.4% 11.2%;
   --syntax-variable: 222.2 84% 4.9%;
   --syntax-operator: 222.2 84% 20%;
+  --syntax-constant: 199 89% 48%;
+  --syntax-tag: 142 76% 36%;
 
   /* Diff colors */
   --diff-inserted: 142 60% 30%;
@@ -201,7 +203,7 @@
   --muted-foreground: 215 20.2% 70%;
   --accent: 270 100% 70%;
   --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 75% 75%;
+  --destructive: 0 72% 63%;
   --destructive-foreground: 210 40% 98%;
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
@@ -223,15 +225,17 @@
   --tooltip: 217.2 32.6% 30%;
   --tooltip-foreground: 210 40% 98%;
 
-  /* Syntax highlighting */
-  --syntax-comment: 215 20.2% 70%;
-  --syntax-punctuation: 210 40% 70%;
+  /* Syntax highlighting - high contrast for dark backgrounds */
+  --syntax-comment: 215 20% 55%;
+  --syntax-punctuation: 210 30% 75%;
   --syntax-property: 210 40% 98%;
-  --syntax-string: 215 20.2% 70%;
-  --syntax-keyword: 210 40% 98%;
+  --syntax-string: 140 70% 65%;
+  --syntax-keyword: 270 100% 80%;
   --syntax-function: 210 40% 98%;
   --syntax-variable: 210 40% 98%;
   --syntax-operator: 210 40% 98%;
+  --syntax-constant: 199 90% 70%;
+  --syntax-tag: 140 70% 65%;
 
   /* Diff colors */
   --diff-inserted: 134 60% 76%;
@@ -303,20 +307,24 @@
    ========================================================================== */
 
 @utility no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 
   &::-webkit-scrollbar {
-    display: none;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 
 @utility hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 
   &::-webkit-scrollbar {
-    display: none;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 
@@ -455,6 +463,19 @@ body.animating-layout
 .mosaic.mosaic-blueprint-theme.mosaic-blueprint-theme .mosaic-split.-column {
   height: 4px;
   margin: -2px 0;
+}
+
+/* Mobile: Wider split dividers for touch dragging */
+@media (max-width: 767px) {
+  .mosaic.mosaic-blueprint-theme.mosaic-blueprint-theme .mosaic-split.-row {
+    width: 12px;
+    margin: 0 -6px;
+  }
+
+  .mosaic.mosaic-blueprint-theme.mosaic-blueprint-theme .mosaic-split.-column {
+    height: 12px;
+    margin: -6px 0;
+  }
 }
 
 /* ==========================================================================

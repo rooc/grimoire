@@ -59,18 +59,17 @@ export function getRelayType(event: NostrEvent): string | undefined {
 }
 
 /**
- * Get array of supported NIP numbers
+ * Get array of supported NIP numbers as strings
  * @param event Relay discovery event (kind 30166)
- * @returns Array of NIP numbers
+ * @returns Array of NIP number strings, sorted numerically
  */
-export function getSupportedNips(event: NostrEvent): number[] {
+export function getSupportedNips(event: NostrEvent): string[] {
   const nips = event.tags
-    .filter((t) => t[0] === "N")
-    .map((t) => parseInt(t[1], 10))
-    .filter((n) => !isNaN(n));
+    .filter((t) => t[0] === "N" && t[1] && !isNaN(Number(t[1])))
+    .map((t) => t[1]);
 
   // Return unique sorted NIPs
-  return Array.from(new Set(nips)).sort((a, b) => a - b);
+  return Array.from(new Set(nips)).sort((a, b) => Number(a) - Number(b));
 }
 
 /**

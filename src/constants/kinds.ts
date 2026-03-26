@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Award,
   BarChart3,
+  ShieldCheck,
   Bookmark,
   Calendar,
   CalendarClock,
@@ -26,6 +27,7 @@ import {
   GitBranch,
   GitMerge,
   GitPullRequest,
+  GraduationCap,
   BookHeart,
   HardDrive,
   Hash,
@@ -33,14 +35,17 @@ import {
   Highlighter,
   Image,
   Key,
+  Landmark,
   List,
   ListChecks,
   ListFilter,
+  ListMusic,
   Lock,
   Mail,
   MessageCircle,
   MessageSquare,
   Mic,
+  Music,
   Package,
   PackageOpen,
   Pin,
@@ -48,8 +53,10 @@ import {
   Presentation,
   Radio,
   Repeat,
+  Search,
   Settings,
   Shield,
+  ShieldBan,
   ShoppingBag,
   Smile,
   Star,
@@ -69,15 +76,24 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+export interface CommunityNip {
+  title: string;
+  identifier: string;
+  pubkey: string;
+  relayHints?: string[];
+}
+
 export interface EventKind {
   kind: number | string;
   name: string;
   description: string;
   nip: string;
   icon: LucideIcon;
+  communityNip?: CommunityNip;
 }
 
 export const SPELL_KIND = 777;
+export const FAVORITE_SPELLS_KIND = 10777;
 export const SPELLBOOK_KIND = 30777;
 
 export const EVENT_KINDS: Record<number | string, EventKind> = {
@@ -166,7 +182,7 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     name: "Thread",
     description: "Thread",
     nip: "7D",
-    icon: MessageSquare,
+    icon: Landmark,
   },
   12: {
     kind: 12,
@@ -757,14 +773,14 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     name: "Blocked Relay List",
     description: "Blocked relays list",
     nip: "51",
-    icon: Radio,
+    icon: ShieldBan,
   },
   10007: {
     kind: 10007,
     name: "Search Relay List",
     description: "Search relays list",
     nip: "51",
-    icon: Radio,
+    icon: Search,
   },
   10009: {
     kind: 10009,
@@ -822,13 +838,20 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     nip: "51",
     icon: Mail,
   },
-  // 10051: {
-  //   kind: 10051,
-  //   name: "KeyPackage Relays",
-  //   description: "KeyPackage Relays List",
-  //   nip: "Marmot",
-  //   icon: Key,
-  // },
+  10051: {
+    kind: 10051,
+    name: "KeyPackage Relays",
+    description: "KeyPackage Relays List",
+    nip: "EE",
+    icon: Key,
+  },
+  10040: {
+    kind: 10040,
+    name: "Trusted Providers",
+    description: "Trusted Assertion Provider List",
+    nip: "85",
+    icon: Shield,
+  },
   10063: {
     kind: 10063,
     name: "Blossom Server List",
@@ -870,6 +893,13 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     description: "User Grasp List",
     nip: "34",
     icon: FolderGit2,
+  },
+  10777: {
+    kind: 10777,
+    name: "Favorite Spells",
+    description: "User's favorite spells list",
+    nip: "",
+    icon: WandSparkles,
   },
   // 10312: {
   //   kind: 10312,
@@ -1199,6 +1229,24 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     nip: "78",
     icon: Settings,
   },
+  30142: {
+    kind: 30142,
+    name: "Educational Resource",
+    description: "AMB Educational Resource Metadata",
+    nip: "AMB",
+    icon: GraduationCap,
+    communityNip: {
+      title: "NIP-AMB",
+      identifier: "edufeed-amb",
+      pubkey:
+        "bdc21f93b1e2cb75608cecd7a0a00a779779d9367dc9798bd9f213f06c95bc48",
+      relayHints: [
+        "wss://relay.nostr.band",
+        "wss://nos.lol",
+        "wss://relay.damus.io",
+      ],
+    },
+  },
   30166: {
     kind: 30166,
     name: "Relay Discovery",
@@ -1219,6 +1267,34 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     description: "Live Event",
     nip: "53",
     icon: Video,
+  },
+  30382: {
+    kind: 30382,
+    name: "User Assertion",
+    description: "Trusted Assertion: User",
+    nip: "85",
+    icon: ShieldCheck,
+  },
+  30383: {
+    kind: 30383,
+    name: "Event Assertion",
+    description: "Trusted Assertion: Event",
+    nip: "85",
+    icon: ShieldCheck,
+  },
+  30384: {
+    kind: 30384,
+    name: "Address Assertion",
+    description: "Trusted Assertion: Addressable Event",
+    nip: "85",
+    icon: ShieldCheck,
+  },
+  30385: {
+    kind: 30385,
+    name: "External Assertion",
+    description: "Trusted Assertion: External Identifier",
+    nip: "85",
+    icon: ShieldCheck,
   },
   30312: {
     kind: 30312,
@@ -1381,12 +1457,26 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     nip: "71",
     icon: Video,
   },
+  34139: {
+    kind: 34139,
+    name: "Playlist",
+    description: "Music playlist",
+    nip: "",
+    icon: ListMusic,
+  },
   34550: {
     kind: 34550,
     name: "Community",
     description: "Community Definition",
     nip: "72",
     icon: Users,
+  },
+  36787: {
+    kind: 36787,
+    name: "Music Track",
+    description: "Music track with audio and metadata",
+    nip: "",
+    icon: Music,
   },
   // 37516: {
   //   kind: 37516,
@@ -1470,4 +1560,15 @@ export function getKindName(kind: number): string {
 
 export function getKindIcon(kind: number): LucideIcon {
   return EVENT_KINDS[kind]?.icon || MessageSquare;
+}
+
+export function getCommunityNipForNipId(
+  nipId: string,
+): CommunityNip | undefined {
+  for (const entry of Object.values(EVENT_KINDS)) {
+    if (entry.nip === nipId && entry.communityNip) {
+      return entry.communityNip;
+    }
+  }
+  return undefined;
 }

@@ -6,7 +6,7 @@ import {
   reencodeWithRelays,
   type DecodedData,
 } from "@/lib/decode-parser";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { useCopy } from "../hooks/useCopy";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -18,7 +18,7 @@ interface DecodeViewerProps {
 }
 
 export default function DecodeViewer({ args }: DecodeViewerProps) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [relays, setRelays] = useState<string[]>([]);
   const [newRelay, setNewRelay] = useState("");

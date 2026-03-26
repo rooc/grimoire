@@ -11,7 +11,7 @@ import {
 import { KindBadge } from "@/components/KindBadge";
 import { Badge } from "@/components/ui/badge";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useGrimoire } from "@/core/state";
+import { useAddWindow } from "@/core/state";
 import { Globe, Smartphone, TabletSmartphone, Package } from "lucide-react";
 
 /**
@@ -44,7 +44,7 @@ function HandlerItem({
   platform?: string;
   relayHint?: string;
 }) {
-  const { addWindow } = useGrimoire();
+  const addWindow = useAddWindow();
   const handlerEvent = useNostrEvent(address);
   const appName = handlerEvent
     ? getAppName(handlerEvent)
