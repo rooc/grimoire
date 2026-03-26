@@ -1,6 +1,6 @@
 import { getNIPInfo } from "../lib/nip-icons";
 import { useAddWindow } from "@/core/state";
-import { isNipDeprecated } from "@/constants/nips";
+import { isNipDeprecated, isValidNip } from "@/constants/nips";
 import { getCommunityNipForNipId } from "@/constants/kinds";
 
 export interface NIPBadgeProps {
@@ -26,6 +26,7 @@ export function NIPBadge({
   const description =
     nipInfo?.description || `Nostr Implementation Possibility ${nipNumber}`;
   const isDeprecated = isNipDeprecated(nipNumber);
+  const isExternal = !isValidNip(nipNumber);
 
   const communityNip = getCommunityNipForNipId(nipNumber);
 
@@ -47,6 +48,18 @@ export function NIPBadge({
       nipInfo ? `NIP ${paddedNum} - ${nipInfo?.name}` : `NIP ${paddedNum}`,
     );
   };
+
+  // External specs (Marmot, BUD-03, etc.) render as non-interactive labels
+  if (isExternal && !communityNip) {
+    return (
+      <span
+        className={`flex items-center gap-2 border bg-card px-2.5 py-1.5 text-sm ${className}`}
+        title={`${nipNumber} (External spec)`}
+      >
+        <span className="text-muted-foreground">{nipNumber}</span>
+      </span>
+    );
+  }
 
   return (
     <button

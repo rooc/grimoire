@@ -5,7 +5,7 @@
 /**
  * Deprecated NIPs that are no longer recommended for use
  */
-export const DEPRECATED_NIPS = ["04", "08", "26", "96"] as const;
+export const DEPRECATED_NIPS = ["04", "08", "26", "96", "EE"] as const;
 
 export const VALID_NIPS = [
   // Numeric NIPs
@@ -79,6 +79,7 @@ export const VALID_NIPS = [
   "77",
   "78",
   "84",
+  "85",
   "86",
   "87",
   "88",
@@ -90,8 +91,10 @@ export const VALID_NIPS = [
   "98",
   "99",
   // Hexadecimal NIPs
+  "5A",
   "7D",
   "A0",
+  "A4",
   "B0",
   "B7",
   "BE",
@@ -177,6 +180,7 @@ export const NIP_TITLES: Record<string, string> = {
   "78": "Application-specific data",
   "7D": "Threads",
   "84": "Highlights",
+  "85": "Trusted Assertions",
   "86": "Relay Management API",
   "87": "Ecash Mint Discoverability",
   "88": "Polls",
@@ -187,7 +191,9 @@ export const NIP_TITLES: Record<string, string> = {
   "96": "HTTP File Storage Integration",
   "98": "HTTP Auth",
   "99": "Classified Listings",
+  "5A": "Pubkey Static Websites",
   A0: "Voice Messages",
+  A4: "Public Messages",
   B0: "Web Bookmarks",
   B7: "Blossom",
   BE: "Nostr BLE Communications Protocol",
@@ -205,6 +211,10 @@ export function getNipUrl(nipId: string): string {
 
 export function getNipTitle(nipId: string): string {
   return NIP_TITLES[nipId] || `NIP-${nipId}`;
+}
+
+export function isValidNip(nipId: string): boolean {
+  return VALID_NIPS.includes(nipId as NipId);
 }
 
 export function isNipDeprecated(nipId: string): boolean {

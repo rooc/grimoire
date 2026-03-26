@@ -95,7 +95,7 @@ const RELAY_LIST_KINDS: RelayListKindUIConfig[] = [
     name: "KeyPackage Relays",
     description:
       "Relays where you publish MLS KeyPackage events. Anyone who wants to start an encrypted group chat with you looks up this list.",
-    nip: "EE",
+    nip: "Marmot",
     tagName: "relay",
     hasMarkers: false,
   },
