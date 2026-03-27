@@ -176,6 +176,16 @@ import {
 import { PlaylistRenderer, PlaylistDetailRenderer } from "./PlaylistRenderer";
 import { EducationalResourceRenderer } from "./EducationalResourceRenderer";
 import { EducationalResourceDetailRenderer } from "./EducationalResourceDetailRenderer";
+import {
+  NsiteRootRenderer,
+  NsiteNamedRenderer,
+  NsiteLegacyRenderer,
+} from "./NsiteRenderer";
+import {
+  NsiteRootDetailRenderer,
+  NsiteNamedDetailRenderer,
+  NsiteLegacyDetailRenderer,
+} from "./NsiteDetailRenderer";
 
 /**
  * Registry of kind-specific renderers
@@ -240,6 +250,7 @@ const kindRenderers: Record<number, React.ComponentType<BaseEventProps>> = {
   10317: Kind10317Renderer, // User Grasp List (NIP-34)
   10777: FavoriteSpellsRenderer, // Favorite Spells (Grimoire)
   13534: RelayMembersRenderer, // Relay Members (NIP-43)
+  15128: NsiteRootRenderer, // Root Nsite Manifest (NIP-5A)
   30000: FollowSetRenderer, // Follow Sets (NIP-51)
   30002: GenericRelayListRenderer, // Relay Sets (NIP-51)
   30003: BookmarkSetRenderer, // Bookmark Sets (NIP-51)
@@ -265,6 +276,8 @@ const kindRenderers: Record<number, React.ComponentType<BaseEventProps>> = {
   34235: Kind21Renderer, // Horizontal Video (NIP-71 legacy)
   34236: Kind22Renderer, // Vertical Video (NIP-71 legacy)
   36787: MusicTrackRenderer, // Music Track
+  34128: NsiteLegacyRenderer, // Legacy Nsite (NIP-5A, deprecated)
+  35128: NsiteNamedRenderer, // Named Nsite Manifest (NIP-5A)
   30617: RepositoryRenderer, // Repository (NIP-34)
   30618: RepositoryStateRenderer, // Repository State (NIP-34)
   30777: SpellbookRenderer, // Spellbook (Grimoire)
@@ -356,6 +369,7 @@ const detailRenderers: Record<
   10317: Kind10317DetailRenderer, // User Grasp List Detail (NIP-34)
   10777: FavoriteSpellsDetailRenderer, // Favorite Spells Detail (Grimoire)
   13534: RelayMembersDetailRenderer, // Relay Members Detail (NIP-43)
+  15128: NsiteRootDetailRenderer, // Root Nsite Manifest Detail (NIP-5A)
   30000: FollowSetDetailRenderer, // Follow Sets Detail (NIP-51)
   30003: BookmarkSetDetailRenderer, // Bookmark Sets Detail (NIP-51)
   30004: ArticleCurationSetDetailRenderer, // Article Curation Sets Detail (NIP-51)
@@ -376,6 +390,8 @@ const detailRenderers: Record<
   30383: TrustedAssertionDetailRenderer, // Event Assertion Detail (NIP-85)
   30384: TrustedAssertionDetailRenderer, // Address Assertion Detail (NIP-85)
   30385: TrustedAssertionDetailRenderer, // External Assertion Detail (NIP-85)
+  34128: NsiteLegacyDetailRenderer, // Legacy Nsite Detail (NIP-5A, deprecated)
+  35128: NsiteNamedDetailRenderer, // Named Nsite Detail (NIP-5A)
   30617: RepositoryDetailRenderer, // Repository Detail (NIP-34)
   30618: RepositoryStateDetailRenderer, // Repository State Detail (NIP-34)
   30777: SpellbookDetailRenderer, // Spellbook Detail (Grimoire)

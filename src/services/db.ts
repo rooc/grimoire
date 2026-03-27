@@ -100,6 +100,13 @@ export interface LnurlCache {
   fetchedAt: number; // Timestamp for cache invalidation
 }
 
+export interface CachedNsiteMetadata {
+  hash: string; // Primary key - sha256 of index.html (content-addressable, never expires)
+  title?: string;
+  description?: string;
+  faviconUrl?: string;
+}
+
 export interface GrimoireZap {
   eventId: string; // Primary key - zap receipt event ID
   senderPubkey: string; // Who sent the zap
@@ -120,6 +127,7 @@ class GrimoireDb extends Dexie {
   spells!: Table<LocalSpell>;
   spellbooks!: Table<LocalSpellbook>;
   lnurlCache!: Table<LnurlCache>;
+  nsiteMetadata!: Table<CachedNsiteMetadata>;
   grimoireZaps!: Table<GrimoireZap>;
 
   constructor(name: string) {
@@ -365,6 +373,24 @@ class GrimoireDb extends Dexie {
       lnurlCache: "&address, fetchedAt",
       grimoireZaps:
         "&eventId, senderPubkey, timestamp, [senderPubkey+timestamp]",
+    });
+
+    // Version 18: Add nsite metadata caching (NIP-5A)
+    this.version(18).stores({
+      profiles: "&pubkey",
+      nip05: "&nip05",
+      nips: "&id",
+      relayInfo: "&url",
+      relayAuthPreferences: "&url",
+      relayLists: "&pubkey, updatedAt",
+      relayLiveness: "&url",
+      blossomServers: "&pubkey, updatedAt",
+      spells: "&id, alias, createdAt, isPublished, deletedAt",
+      spellbooks: "&id, slug, title, createdAt, isPublished, deletedAt",
+      lnurlCache: "&address, fetchedAt",
+      grimoireZaps:
+        "&eventId, senderPubkey, timestamp, [senderPubkey+timestamp]",
+      nsiteMetadata: "&hash",
     });
   }
 }
