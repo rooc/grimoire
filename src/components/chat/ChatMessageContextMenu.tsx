@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useAddWindow } from "@/core/state";
 import { useCopy } from "@/hooks/useCopy";
-import { JsonViewer } from "@/components/JsonViewer";
+import { EventJsonDialog } from "@/components/EventJsonDialog";
 import { KindBadge } from "@/components/KindBadge";
 import { EmojiPickerDialog } from "./EmojiPickerDialog";
 import { nip19 } from "nostr-tools";
@@ -224,11 +224,10 @@ export function ChatMessageContextMenu({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      <JsonViewer
-        data={event}
+      <EventJsonDialog
+        event={event}
         open={jsonDialogOpen}
         onOpenChange={setJsonDialogOpen}
-        title={`Event ${event.id.slice(0, 8)}... - Raw JSON`}
       />
       {conversation && adapter && (
         <EmojiPickerDialog

@@ -30,7 +30,7 @@ import { useAddWindow, useGrimoire } from "@/core/state";
 import { useCopy } from "@/hooks/useCopy";
 import { useAccount } from "@/hooks/useAccount";
 import { useSettings } from "@/hooks/useSettings";
-import { JsonViewer } from "@/components/JsonViewer";
+import { EventJsonDialog } from "@/components/EventJsonDialog";
 import { EmojiPickerDialog } from "@/components/chat/EmojiPickerDialog";
 import { formatTimestamp } from "@/hooks/useLocale";
 import { nip19 } from "nostr-tools";
@@ -295,11 +295,10 @@ export function EventMenu({
           View JSON
         </DropdownMenuItem>
       </DropdownMenuContent>
-      <JsonViewer
-        data={event}
+      <EventJsonDialog
+        event={event}
         open={jsonDialogOpen}
         onOpenChange={setJsonDialogOpen}
-        title={`Event ${event.id.slice(0, 8)}... - Raw JSON`}
       />
     </DropdownMenu>
   );
@@ -475,11 +474,10 @@ export function EventContextMenu({
           View JSON
         </ContextMenuItem>
       </ContextMenuContent>
-      <JsonViewer
-        data={event}
+      <EventJsonDialog
+        event={event}
         open={jsonDialogOpen}
         onOpenChange={setJsonDialogOpen}
-        title={`Event ${event.id.slice(0, 8)}... - Raw JSON`}
       />
     </ContextMenu>
   );

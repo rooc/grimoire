@@ -3,7 +3,7 @@ import type { EventPointer, AddressPointer } from "nostr-tools/nip19";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import { DetailKindRenderer } from "./nostr/kinds";
 import { EventErrorBoundary } from "./EventErrorBoundary";
-import { JsonViewer } from "./JsonViewer";
+import { EventJsonDialog } from "./EventJsonDialog";
 import { RelayLink } from "./nostr/RelayLink";
 import { EventDetailSkeleton } from "@/components/ui/skeleton";
 import { Copy, CopyCheck, FileJson, Wifi } from "lucide-react";
@@ -178,11 +178,10 @@ export function EventDetailViewer({ pointer }: EventDetailViewerProps) {
       </div>
 
       {/* JSON Viewer Dialog */}
-      <JsonViewer
-        data={event}
+      <EventJsonDialog
+        event={event}
         open={showJson}
         onOpenChange={setShowJson}
-        title="Event JSON"
       />
     </div>
   );
