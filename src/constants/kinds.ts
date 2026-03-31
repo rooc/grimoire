@@ -790,6 +790,13 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
     nip: "51",
     icon: Search,
   },
+  10008: {
+    kind: 10008,
+    name: "Profile Badge",
+    description: "Profile Badges",
+    nip: "58",
+    icon: Award,
+  },
   10009: {
     kind: 10009,
     name: "User Group List",
@@ -1183,8 +1190,8 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
   },
   30008: {
     kind: 30008,
-    name: "Profile Badge",
-    description: "Profile Badges",
+    name: "Badge Set",
+    description: "Badge Set",
     nip: "58",
     icon: Award,
   },

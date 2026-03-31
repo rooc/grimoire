@@ -13,6 +13,7 @@ import {
   getBadgeImageUrl,
 } from "@/lib/nip58-helpers";
 import { Award } from "lucide-react";
+import { getTagValue } from "applesauce-core/helpers";
 
 /**
  * Parse an address pointer from an a tag value
@@ -78,6 +79,8 @@ function BadgeItem({ badgeAddress }: { badgeAddress: string }) {
  */
 export function ProfileBadgesRenderer({ event }: BaseEventProps) {
   const badgePairs = getProfileBadgePairs(event);
+  const isProfileBadges = getTagValue(event, "d") === "profile_badges";
+  const heading = isProfileBadges ? "Profile Badges" : "Badge Set";
   const MAX_VISIBLE_BADGES = 5;
   const visibleBadges = badgePairs.slice(0, MAX_VISIBLE_BADGES);
   const remainingCount = Math.max(0, badgePairs.length - MAX_VISIBLE_BADGES);
@@ -101,7 +104,8 @@ export function ProfileBadgesRenderer({ event }: BaseEventProps) {
           event={event}
           className="text-sm font-semibold text-foreground hover:text-foreground/80"
         >
-          {badgePairs.length} {badgePairs.length === 1 ? "badge" : "badges"}
+          {heading}: {badgePairs.length}{" "}
+          {badgePairs.length === 1 ? "badge" : "badges"}
         </ClickableEventTitle>
 
         {/* Limited Badge Thumbnails */}

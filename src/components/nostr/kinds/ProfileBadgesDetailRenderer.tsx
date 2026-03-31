@@ -10,6 +10,7 @@ import {
   getBadgeImageUrl,
 } from "@/lib/nip58-helpers";
 import { Award } from "lucide-react";
+import { getTagValue } from "applesauce-core/helpers";
 import { UserName } from "../UserName";
 import { ClickableEventTitle } from "./BaseEventRenderer";
 
@@ -125,12 +126,14 @@ export function ProfileBadgesDetailRenderer({
   event,
 }: ProfileBadgesDetailRendererProps) {
   const badgePairs = getProfileBadgePairs(event);
+  const isProfileBadges = getTagValue(event, "d") === "profile_badges";
+  const heading = isProfileBadges ? "Profile Badges" : "Badge Set";
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">Profile Badges</h1>
+        <h1 className="text-3xl font-bold">{heading}</h1>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <UserName pubkey={event.pubkey} />
           <span>•</span>
