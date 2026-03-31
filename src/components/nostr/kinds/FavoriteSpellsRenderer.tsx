@@ -5,7 +5,9 @@ import {
   ClickableEventTitle,
 } from "./BaseEventRenderer";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
-import { useFavoriteSpells, getSpellPointers } from "@/hooks/useFavoriteSpells";
+import { useFavoriteList, getListPointers } from "@/hooks/useFavoriteList";
+import { FAVORITE_LISTS } from "@/config/favorite-lists";
+import { SPELL_KIND } from "@/constants/kinds";
 import { useAccount } from "@/hooks/useAccount";
 import { useAddWindow } from "@/core/state";
 import { decodeSpell } from "@/lib/spell-conversion";
@@ -19,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * Kind 10777 Renderer - Favorite Spells (Feed View)
  */
 export function FavoriteSpellsRenderer({ event }: BaseEventProps) {
-  const pointers = getSpellPointers(event);
+  const pointers = getListPointers(event, "e");
 
   return (
     <BaseEventContainer event={event}>
@@ -126,9 +128,9 @@ function SpellRefItem({
  */
 export function FavoriteSpellsDetailRenderer({ event }: { event: NostrEvent }) {
   const { canSign } = useAccount();
-  const { toggleFavorite } = useFavoriteSpells();
+  const { toggleFavorite } = useFavoriteList(FAVORITE_LISTS[SPELL_KIND]);
 
-  const pointers = getSpellPointers(event);
+  const pointers = getListPointers(event, "e");
 
   return (
     <div className="flex flex-col gap-6 p-4">

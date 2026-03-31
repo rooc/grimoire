@@ -4,6 +4,7 @@ import { useAccountSync } from "@/hooks/useAccountSync";
 import { useRelayListCacheSync } from "@/hooks/useRelayListCacheSync";
 import { useBlossomServerCacheSync } from "@/hooks/useBlossomServerCacheSync";
 import { useEmojiSearchSync } from "@/hooks/useEmojiSearchSync";
+import { useFavoriteListsSync } from "@/hooks/useFavoriteListsSync";
 import { useRelayState } from "@/hooks/useRelayState";
 import relayStateManager from "@/services/relay-state-manager";
 import { TabBar } from "../TabBar";
@@ -33,6 +34,9 @@ export function AppShell({ children, hideBottomBar = false }: AppShellProps) {
 
   // Cache emoji lists (kind:10030) and emoji sets (kind:30030) for instant availability
   useEmojiSearchSync();
+
+  // Pre-fetch all configured favorite lists (kind:10777, kind:10018, kind:10030)
+  useFavoriteListsSync();
 
   // Initialize global relay state manager
   useEffect(() => {

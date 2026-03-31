@@ -94,7 +94,6 @@ export interface EventKind {
 }
 
 export const SPELL_KIND = 777;
-export const FAVORITE_SPELLS_KIND = 10777;
 export const SPELLBOOK_KIND = 30777;
 
 export const EVENT_KINDS: Record<number | string, EventKind> = {

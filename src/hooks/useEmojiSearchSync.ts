@@ -4,6 +4,9 @@
  * Loads cached emojis from Dexie on startup (instant availability),
  * then subscribes to kind:10030 and kind:30030 events for live updates.
  * Should be used once at app root level (AppShell).
+ *
+ * NOTE: Network fetching of kind:10030 is handled by useFavoriteListsSync.
+ * This hook only subscribes to the EventStore observable for cache updates.
  */
 
 import { useEffect } from "react";

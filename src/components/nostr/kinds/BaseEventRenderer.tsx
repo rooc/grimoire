@@ -24,7 +24,8 @@ import {
   Zap,
   MessageSquare,
   SmilePlus,
-  Star,
+  Bookmark,
+  Loader2,
 } from "lucide-react";
 import { useAddWindow, useGrimoire } from "@/core/state";
 import { useCopy } from "@/hooks/useCopy";
@@ -46,8 +47,11 @@ import { ReactionBlueprint } from "@/lib/blueprints";
 import { publishEventToRelays } from "@/services/hub";
 import { selectRelaysForInteraction } from "@/services/relay-selection";
 import type { EmojiTag } from "@/lib/emoji-helpers";
-import { useFavoriteSpells } from "@/hooks/useFavoriteSpells";
-import { SPELL_KIND } from "@/constants/kinds";
+import { useFavoriteList } from "@/hooks/useFavoriteList";
+import {
+  getFavoriteConfig,
+  FALLBACK_FAVORITE_CONFIG,
+} from "@/config/favorite-lists";
 
 /**
  * Universal event properties and utilities shared across all kind renderers
@@ -139,9 +143,11 @@ export function EventMenu({
   const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
-  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
-  const isSpell = event.kind === SPELL_KIND;
-  const favorited = isSpell && isFavorite(event.id);
+  const favoriteConfig = getFavoriteConfig(event.kind);
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteList(
+    favoriteConfig ?? FALLBACK_FAVORITE_CONFIG,
+  );
+  const favorited = favoriteConfig ? isFavorite(event) : false;
 
   const openEventDetail = () => {
     let pointer;
@@ -270,15 +276,22 @@ export function EventMenu({
             React
           </DropdownMenuItem>
         )}
-        {canSign && isSpell && (
+        {canSign && favoriteConfig && (
           <DropdownMenuItem
             onClick={() => toggleFavorite(event)}
             disabled={isUpdating}
           >
-            <Star
-              className={`size-4 mr-2 ${favorited ? "text-yellow-500 fill-current" : ""}`}
-            />
-            {favorited ? "Remove from Favorites" : "Add to Favorites"}
+            {isUpdating ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <Bookmark
+                className={cn(
+                  "size-4 mr-2",
+                  favorited && "text-yellow-500 fill-current",
+                )}
+              />
+            )}
+            {favorited ? "Unbookmark" : "Bookmark"}
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -322,9 +335,11 @@ export function EventContextMenu({
   const addWindow = useAddWindow();
   const { copy, copied } = useCopy();
   const [jsonDialogOpen, setJsonDialogOpen] = useState(false);
-  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteSpells();
-  const isSpell = event.kind === SPELL_KIND;
-  const favorited = isSpell && isFavorite(event.id);
+  const favoriteConfig = getFavoriteConfig(event.kind);
+  const { isFavorite, toggleFavorite, isUpdating } = useFavoriteList(
+    favoriteConfig ?? FALLBACK_FAVORITE_CONFIG,
+  );
+  const favorited = favoriteConfig ? isFavorite(event) : false;
 
   const openEventDetail = () => {
     let pointer;
@@ -449,15 +464,22 @@ export function EventContextMenu({
             React
           </ContextMenuItem>
         )}
-        {canSign && isSpell && (
+        {canSign && favoriteConfig && (
           <ContextMenuItem
             onClick={() => toggleFavorite(event)}
             disabled={isUpdating}
           >
-            <Star
-              className={`size-4 mr-2 ${favorited ? "text-yellow-500 fill-current" : ""}`}
-            />
-            {favorited ? "Remove from Favorites" : "Add to Favorites"}
+            {isUpdating ? (
+              <Loader2 className="size-4 mr-2 animate-spin" />
+            ) : (
+              <Bookmark
+                className={cn(
+                  "size-4 mr-2",
+                  favorited && "text-yellow-500 fill-current",
+                )}
+              />
+            )}
+            {favorited ? "Unbookmark" : "Bookmark"}
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />

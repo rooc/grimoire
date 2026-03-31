@@ -1,6 +1,9 @@
+import { useMemo } from "react";
 import { WandSparkles, Star } from "lucide-react";
 import { useAccount } from "@/hooks/useAccount";
-import { useFavoriteSpells } from "@/hooks/useFavoriteSpells";
+import { useFavoriteList, getListPointers } from "@/hooks/useFavoriteList";
+import { FAVORITE_LISTS } from "@/config/favorite-lists";
+import { SPELL_KIND } from "@/constants/kinds";
 import { useNostrEvent } from "@/hooks/useNostrEvent";
 import { useAddWindow } from "@/core/state";
 import { decodeSpell } from "@/lib/spell-conversion";
@@ -15,7 +18,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { FAVORITE_SPELLS_KIND } from "@/constants/kinds";
 
 /**
  * A single spell item in the dropdown
@@ -82,7 +84,12 @@ function FavoriteSpellItem({ pointer }: { pointer: EventPointer }) {
  */
 export function FavoriteSpellsDropdown() {
   const { isLoggedIn, pubkey } = useAccount();
-  const { favorites, event } = useFavoriteSpells();
+  const spellConfig = FAVORITE_LISTS[SPELL_KIND];
+  const { event } = useFavoriteList(spellConfig);
+  const favorites = useMemo(
+    () => (event ? getListPointers(event, "e") : []),
+    [event],
+  );
   const addWindow = useAddWindow();
 
   if (!isLoggedIn) return null;
@@ -92,7 +99,7 @@ export function FavoriteSpellsDropdown() {
       // Open the user's kind 10777 event in detail view
       addWindow("open", {
         pointer: {
-          kind: FAVORITE_SPELLS_KIND,
+          kind: spellConfig.listKind,
           pubkey: pubkey!,
           identifier: "",
         },
