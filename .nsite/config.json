@@ -13,10 +13,9 @@
     "https://blossom.band",
     "https://cdn.hzrd149.com"
   ],
-  "id": "grimoire",
   "title": "grimoire",
   "description": "a nostr client for magicians",
-  "publishAppHandler": false,
+  "publishAppHandler": true,
   "profile": {
     "name": "grimoire",
     "about": "a nostr client for magicians",
@@ -24,7 +23,7 @@
     "website": "https://grimoire.rocks"
   },
   "appHandler": {
-    "id": "k50nvf8d85",
+    "id": "grimoire",
     "kinds": [777, 10777, 30777],
     "name": "grimoire",
     "description": "a nostr client for magicians",
