@@ -1,10 +1,16 @@
-import { useMemo, useEffect } from "react";
+import { Fragment, useMemo, useEffect } from "react";
 import { use$ } from "applesauce-react/hooks";
 import { cn } from "@/lib/utils";
 import eventStore from "@/services/event-store";
 import pool from "@/services/relay-pool";
 import accountManager from "@/services/accounts";
 import { EMOJI_SHORTCODE_REGEX } from "@/lib/emoji-helpers";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import { UserName } from "@/components/nostr/UserName";
 
 interface MessageReactionsProps {
   messageId: string;
@@ -131,46 +137,67 @@ export function MessageReactions({ messageId, relays }: MessageReactionsProps) {
   if (aggregated.length === 0) return null;
 
   return (
-    <div className="inline-flex gap-2 max-w-full overflow-x-auto hide-scrollbar">
-      {aggregated.map((reaction) => (
-        <ReactionBadge
-          key={reaction.customEmoji?.shortcode || reaction.emoji}
-          reaction={reaction}
-        />
-      ))}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="inline-flex gap-2 max-w-full overflow-x-auto hide-scrollbar">
+          {aggregated.map((reaction) => (
+            <ReactionBadge
+              key={reaction.customEmoji?.shortcode || reaction.emoji}
+              reaction={reaction}
+            />
+          ))}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="text-left" align="start">
+        <div className="flex flex-col items-start gap-2">
+          {aggregated.map((reaction) => (
+            <div
+              key={reaction.customEmoji?.shortcode || reaction.emoji}
+              className="flex flex-col items-start gap-0.5"
+            >
+              {reaction.customEmoji ? (
+                <img
+                  src={reaction.customEmoji.url}
+                  alt={`:${reaction.customEmoji.shortcode}:`}
+                  className="size-4 inline-block object-contain"
+                />
+              ) : (
+                <span>{reaction.emoji}</span>
+              )}
+              <span className="inline-flex items-baseline flex-wrap">
+                {reaction.pubkeys.map((pk, i) => (
+                  <Fragment key={pk}>
+                    {i > 0 &&
+                      (i === reaction.pubkeys.length - 1 ? (
+                        <span className="text-tooltip-foreground mx-1">
+                          and
+                        </span>
+                      ) : (
+                        <span className="text-tooltip-foreground mr-1">,</span>
+                      ))}
+                    <UserName
+                      pubkey={pk}
+                      className="text-tooltip-foreground [&>span]:text-tooltip-foreground [&>span]:bg-none"
+                    />
+                  </Fragment>
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
-/**
- * Single reaction badge with tooltip showing who reacted
- */
 function ReactionBadge({ reaction }: { reaction: ReactionSummary }) {
-  // Get active user to check if they reacted
   const activeAccount = use$(accountManager.active$);
   const hasUserReacted = activeAccount?.pubkey
     ? reaction.pubkeys.includes(activeAccount.pubkey)
     : false;
 
-  // Build tooltip with emoji and truncated pubkeys
-  const tooltip = useMemo(() => {
-    // Truncate pubkeys to first 8 chars for readability
-    const pubkeyList = reaction.pubkeys
-      .map((pk) => pk.slice(0, 8) + "...")
-      .join(", ");
-
-    // Format: "❤️ 3\nabcd1234..., efgh5678..."
-    const emojiDisplay = reaction.customEmoji
-      ? `:${reaction.customEmoji.shortcode}:`
-      : reaction.emoji;
-    return `${emojiDisplay} ${reaction.count}\n${pubkeyList}`;
-  }, [reaction]);
-
   return (
-    <span
-      className="inline-flex items-center gap-1.5 text-[10px] leading-tight"
-      title={tooltip}
-    >
+    <span className="inline-flex items-center gap-1.5 text-[10px] leading-tight">
       {reaction.customEmoji ? (
         <img
           src={reaction.customEmoji.url}
