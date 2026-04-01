@@ -22,6 +22,8 @@ import eventStore from "@/services/event-store";
 import pool from "@/services/relay-pool";
 import { publishEventToRelays } from "@/services/hub";
 import accountManager from "@/services/accounts";
+import { settingsManager } from "@/services/settings";
+import { GRIMOIRE_CLIENT_TAG } from "@/constants/app";
 import { AGGREGATOR_RELAYS } from "@/services/loaders";
 import { mergeRelaySets } from "applesauce-core/helpers";
 import { getOutboxes } from "applesauce-core/helpers/mailboxes";
@@ -410,6 +412,11 @@ export class Nip10Adapter extends ChatProtocolAdapter {
       }
     }
 
+    // Add client tag if enabled in settings
+    if (settingsManager.getSetting("post", "includeClientTag")) {
+      draft.tags.push(GRIMOIRE_CLIENT_TAG);
+    }
+
     // Sign the event
     const event = await factory.sign(draft);
 
@@ -456,6 +463,11 @@ export class Nip10Adapter extends ChatProtocolAdapter {
       messageEvent,
       emojiArg,
     );
+
+    // Add client tag if enabled in settings
+    if (settingsManager.getSetting("post", "includeClientTag")) {
+      draft.tags.push(GRIMOIRE_CLIENT_TAG);
+    }
 
     // Sign the event
     const event = await factory.sign(draft);
