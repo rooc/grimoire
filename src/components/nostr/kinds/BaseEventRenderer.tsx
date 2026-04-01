@@ -560,7 +560,6 @@ export function BaseEventContainer({
   };
 }) {
   const { locale } = useGrimoire();
-  const addWindow = useAddWindow();
   const { canSign, signer, pubkey } = useAccount();
   const { settings } = useSettings();
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -624,13 +623,6 @@ export function BaseEventContainer({
   const clientAppPointer =
     parsedClientAddress?.kind === 31990 ? parsedClientAddress : null;
 
-  const handleClientClick = (e: React.MouseEvent) => {
-    if (clientAppPointer) {
-      e.stopPropagation();
-      addWindow("open", { pointer: clientAppPointer });
-    }
-  };
-
   return (
     <>
       <EventContextMenu
@@ -638,31 +630,16 @@ export function BaseEventContainer({
         onReactClick={handleReactClick}
         canSign={canSign}
       >
-        <div className="flex flex-col gap-2 p-3 border-b border-border/50 last:border-0">
-          <div className="flex flex-row justify-between items-center">
-            <div className="flex flex-row gap-2 items-baseline">
-              <EventAuthor pubkey={displayPubkey} />
+        <div className="flex flex-col gap-1 p-3 border-b border-border/50 last:border-0">
+          <div className="flex flex-row justify-between items-center gap-2">
+            <div className="flex flex-row gap-2 items-baseline min-w-0 overflow-hidden">
+              <EventAuthor pubkey={displayPubkey} className="min-w-0" />
               <span
-                className="text-xs text-muted-foreground cursor-help"
+                className="text-xs text-muted-foreground cursor-help shrink-0 whitespace-nowrap"
                 title={absoluteTime}
               >
                 {relativeTime}
               </span>
-              {settings?.appearance?.showClientTags && clientName && (
-                <span className="text-[10px] text-muted-foreground/70">
-                  via{" "}
-                  {clientAppPointer ? (
-                    <button
-                      onClick={handleClientClick}
-                      className="hover:underline hover:text-foreground cursor-crosshair"
-                    >
-                      {clientName}
-                    </button>
-                  ) : (
-                    clientName
-                  )}
-                </span>
-              )}
             </div>
             <EventMenu
               event={event}
@@ -671,7 +648,13 @@ export function BaseEventContainer({
             />
           </div>
           {children}
-          <EventFooter event={event} />
+          <EventFooter
+            event={event}
+            clientName={
+              settings?.appearance?.showClientTags ? clientName : undefined
+            }
+            clientAppPointer={clientAppPointer}
+          />
         </div>
       </EventContextMenu>
       <EmojiPickerDialog

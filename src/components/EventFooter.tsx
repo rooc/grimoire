@@ -14,6 +14,12 @@ import { RelayLink } from "./nostr/RelayLink";
 
 interface EventFooterProps {
   event: NostrEvent;
+  clientName?: string;
+  clientAppPointer?: {
+    kind: number;
+    pubkey: string;
+    identifier: string;
+  } | null;
 }
 
 /**
@@ -21,7 +27,11 @@ interface EventFooterProps {
  * Left: Kind badge (clickable to open KIND command)
  * Right: Relay count dropdown
  */
-export function EventFooter({ event }: EventFooterProps) {
+export function EventFooter({
+  event,
+  clientName,
+  clientAppPointer,
+}: EventFooterProps) {
   const addWindow = useAddWindow();
 
   // Get relays this event was seen on
@@ -35,24 +45,44 @@ export function EventFooter({ event }: EventFooterProps) {
   };
 
   return (
-    <div className="pt-2">
+    <div className="pt-1">
       {/* Footer Bar */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        {/* Left: Kind Badge */}
-        <button
-          onClick={handleKindClick}
-          className="group flex items-center gap-2 md:gap-1.5 min-h-[44px] md:min-h-0 px-1 -mx-1 cursor-crosshair hover:text-foreground transition-colors"
-          title={`View documentation for kind ${event.kind}`}
-        >
-          <KindBadge
-            kind={event.kind}
-            variant="compact"
-            iconClassname="text-muted-foreground group-hover:text-foreground transition-colors size-4 md:size-3"
-          />
-          <span className="text-xs md:text-[10px] md:leading-[10px]">
-            {kindName}
-          </span>
-        </button>
+        {/* Left: Kind Badge + Client */}
+        <div className="flex items-center gap-2 md:gap-1.5">
+          <button
+            onClick={handleKindClick}
+            className="group flex items-center gap-2 md:gap-1.5 min-h-[44px] md:min-h-0 px-1 -mx-1 cursor-crosshair hover:text-foreground transition-colors"
+            title={`View documentation for kind ${event.kind}`}
+          >
+            <KindBadge
+              kind={event.kind}
+              variant="compact"
+              iconClassname="text-muted-foreground group-hover:text-foreground transition-colors size-4 md:size-3"
+            />
+            <span className="text-xs md:text-[10px] md:leading-[10px]">
+              {kindName}
+            </span>
+          </button>
+          {clientName && (
+            <span className="text-xs md:text-[10px] md:leading-[10px] text-muted-foreground/70">
+              ·{" "}
+              {clientAppPointer ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addWindow("open", { pointer: clientAppPointer });
+                  }}
+                  className="hover:underline hover:text-foreground cursor-crosshair"
+                >
+                  {clientName}
+                </button>
+              ) : (
+                clientName
+              )}
+            </span>
+          )}
+        </div>
 
         {/* Right: Relay Dropdown */}
         {relays.length > 0 && (

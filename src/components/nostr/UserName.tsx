@@ -50,13 +50,14 @@ export function UserName({
     <span
       dir="auto"
       className={cn(
-        "font-semibold cursor-crosshair hover:underline hover:decoration-dotted inline-flex items-center gap-1",
+        "font-semibold cursor-crosshair hover:underline hover:decoration-dotted inline-flex items-center gap-1 max-w-full whitespace-nowrap overflow-hidden",
         className,
       )}
       onClick={handleClick}
     >
       <span
         className={cn(
+          "truncate",
           isGrimoire
             ? isActiveAccount
               ? "bg-gradient-to-tr from-orange-400 to-amber-600 bg-clip-text text-transparent"
