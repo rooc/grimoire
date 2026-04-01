@@ -1,10 +1,13 @@
-import { Fragment, useMemo, useEffect } from "react";
+import { useMemo, useEffect, useCallback, useState } from "react";
 import { use$ } from "applesauce-react/hooks";
 import { cn } from "@/lib/utils";
 import eventStore from "@/services/event-store";
 import pool from "@/services/relay-pool";
 import accountManager from "@/services/accounts";
 import { EMOJI_SHORTCODE_REGEX } from "@/lib/emoji-helpers";
+import type { EmojiTag } from "@/lib/emoji-helpers";
+import type { ChatProtocolAdapter } from "@/lib/chat/adapters/base-adapter";
+import type { Conversation } from "@/types/chat";
 import {
   Popover,
   PopoverTrigger,
@@ -16,6 +19,10 @@ interface MessageReactionsProps {
   messageId: string;
   /** Relay URLs for fetching reactions - protocol-specific */
   relays: string[];
+  /** Chat adapter for sending reactions */
+  adapter?: ChatProtocolAdapter;
+  /** Conversation context for sending reactions */
+  conversation?: Conversation;
 }
 
 interface ReactionSummary {
@@ -37,7 +44,12 @@ interface ReactionSummary {
  * Fetches reactions from protocol-specific relays and uses EventStore timeline
  * for reactive updates - new reactions appear automatically.
  */
-export function MessageReactions({ messageId, relays }: MessageReactionsProps) {
+export function MessageReactions({
+  messageId,
+  relays,
+  adapter,
+  conversation,
+}: MessageReactionsProps) {
   // Start relay subscription to fetch reactions for this message
   useEffect(() => {
     if (relays.length === 0) return;
@@ -133,12 +145,49 @@ export function MessageReactions({ messageId, relays }: MessageReactionsProps) {
       }
     }
 
-    // Sort by count descending, then by emoji alphabetically
-    return Array.from(map.values()).sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.emoji.localeCompare(b.emoji);
-    });
+    // Reverse so oldest emoji is first (left) and new reactions append to the right
+    return Array.from(map.values()).reverse();
   }, [reactions]);
+
+  const activeAccount = use$(accountManager.active$);
+  const canSign = !!activeAccount?.signer;
+
+  const [sendingEmoji, setSendingEmoji] = useState<string | null>(null);
+
+  const handleReact = useCallback(
+    async (reaction: ReactionSummary) => {
+      if (!adapter || !conversation || !canSign) return;
+
+      const emojiKey = reaction.customEmoji
+        ? `:${reaction.customEmoji.shortcode}:`
+        : reaction.emoji;
+      setSendingEmoji(emojiKey);
+
+      const customEmoji: EmojiTag | undefined = reaction.customEmoji
+        ? {
+            shortcode: reaction.customEmoji.shortcode,
+            url: reaction.customEmoji.url,
+          }
+        : undefined;
+
+      try {
+        await adapter.sendReaction(
+          conversation,
+          messageId,
+          reaction.emoji,
+          customEmoji,
+        );
+      } catch (err) {
+        console.error(
+          `[MessageReactions] Failed to send reaction for ${messageId.slice(0, 8)}...`,
+          err,
+        );
+      } finally {
+        setSendingEmoji(null);
+      }
+    },
+    [adapter, conversation, messageId, canSign],
+  );
 
   // Don't render if no reactions
   if (aggregated.length === 0) return null;
@@ -146,60 +195,106 @@ export function MessageReactions({ messageId, relays }: MessageReactionsProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="inline-flex gap-2 max-w-full overflow-x-auto hide-scrollbar cursor-pointer">
-          {aggregated.map((reaction) => (
-            <ReactionBadge
-              key={reaction.customEmoji?.shortcode || reaction.emoji}
-              reaction={reaction}
-            />
-          ))}
+        <button
+          type="button"
+          className="inline-flex gap-2 max-w-full overflow-x-auto hide-scrollbar cursor-pointer"
+        >
+          {aggregated.map((reaction) => {
+            const hasUserReacted = activeAccount?.pubkey
+              ? reaction.pubkeys.includes(activeAccount.pubkey)
+              : false;
+            return (
+              <ReactionBadge
+                key={reaction.customEmoji?.shortcode || reaction.emoji}
+                reaction={reaction}
+                hasUserReacted={hasUserReacted}
+              />
+            );
+          })}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="text-left w-auto p-2 text-sm" align="start">
-        <div className="flex flex-col items-start gap-2">
-          {aggregated.map((reaction) => (
-            <div
-              key={reaction.customEmoji?.shortcode || reaction.emoji}
-              className="flex flex-col items-start gap-0.5"
-            >
-              {reaction.customEmoji ? (
-                <img
-                  src={reaction.customEmoji.url}
-                  alt={`:${reaction.customEmoji.shortcode}:`}
-                  className="size-4 inline-block object-contain"
-                />
-              ) : (
-                <span>{reaction.emoji}</span>
-              )}
-              <span className="inline-flex items-baseline flex-wrap">
-                {reaction.pubkeys.map((pk, i) => (
-                  <Fragment key={pk}>
-                    {i > 0 &&
-                      (i === reaction.pubkeys.length - 1 ? (
-                        <span className="text-muted-foreground mx-1">and</span>
+      <PopoverContent
+        className="text-left w-56 p-2 max-h-64 overflow-y-auto"
+        align="start"
+      >
+        <div className="flex flex-col gap-2">
+          {aggregated.map((reaction) => {
+            const hasReacted = activeAccount?.pubkey
+              ? reaction.pubkeys.includes(activeAccount.pubkey)
+              : false;
+            const emojiKey = reaction.customEmoji
+              ? `:${reaction.customEmoji.shortcode}:`
+              : reaction.emoji;
+            const isSending = sendingEmoji === emojiKey;
+            const isTappable = canSign && !hasReacted && !isSending;
+
+            return (
+              <div
+                key={reaction.customEmoji?.shortcode || reaction.emoji}
+                className="flex flex-col gap-1"
+              >
+                <div className="inline-flex items-center gap-2 text-sm">
+                  {isTappable ? (
+                    <button
+                      type="button"
+                      className="cursor-pointer hover:bg-muted rounded px-1 -mx-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReact(reaction);
+                      }}
+                      title="React"
+                    >
+                      {reaction.customEmoji ? (
+                        <img
+                          src={reaction.customEmoji.url}
+                          alt={`:${reaction.customEmoji.shortcode}:`}
+                          className="size-4 inline-block object-contain"
+                        />
                       ) : (
-                        <span className="text-muted-foreground mr-1">,</span>
-                      ))}
-                    <UserName pubkey={pk} />
-                  </Fragment>
-                ))}
-              </span>
-            </div>
-          ))}
+                        <span>{reaction.emoji}</span>
+                      )}
+                    </button>
+                  ) : reaction.customEmoji ? (
+                    <img
+                      src={reaction.customEmoji.url}
+                      alt={`:${reaction.customEmoji.shortcode}:`}
+                      className={cn(
+                        "size-4 inline-block object-contain",
+                        isSending && "animate-pulse",
+                      )}
+                    />
+                  ) : (
+                    <span className={cn(isSending && "animate-pulse")}>
+                      {reaction.emoji}
+                    </span>
+                  )}
+                  <span className="text-muted-foreground text-sm">
+                    {reaction.count}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  {reaction.pubkeys.map((pk) => (
+                    <UserName key={pk} pubkey={pk} className="text-xs" />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </PopoverContent>
     </Popover>
   );
 }
 
-function ReactionBadge({ reaction }: { reaction: ReactionSummary }) {
-  const activeAccount = use$(accountManager.active$);
-  const hasUserReacted = activeAccount?.pubkey
-    ? reaction.pubkeys.includes(activeAccount.pubkey)
-    : false;
-
+function ReactionBadge({
+  reaction,
+  hasUserReacted,
+}: {
+  reaction: ReactionSummary;
+  hasUserReacted: boolean;
+}) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] leading-tight">
+    <span className="inline-flex items-center gap-1 text-xs leading-none">
       {reaction.customEmoji ? (
         <img
           src={reaction.customEmoji.url}
@@ -207,9 +302,7 @@ function ReactionBadge({ reaction }: { reaction: ReactionSummary }) {
           className="size-3.5 flex-shrink-0 object-contain"
         />
       ) : (
-        <span className="text-xs leading-none flex-shrink-0">
-          {reaction.emoji}
-        </span>
+        <span className="flex-shrink-0">{reaction.emoji}</span>
       )}
       <span
         className={cn(

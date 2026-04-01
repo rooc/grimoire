@@ -428,7 +428,12 @@ const MessageItem = memo(function MessageItem({
                 <Timestamp timestamp={message.timestamp} />
               </span>
               {/* Reactions display - inline after timestamp */}
-              <MessageReactions messageId={message.id} relays={relays} />
+              <MessageReactions
+                messageId={message.id}
+                relays={relays}
+                adapter={adapter}
+                conversation={conversation}
+              />
             </div>
             {shouldShowReplyPreview && zapReplyPointer && (
               <ReplyPreview
@@ -461,7 +466,12 @@ const MessageItem = memo(function MessageItem({
             <Timestamp timestamp={message.timestamp} />
           </span>
           {/* Reactions display - inline after timestamp */}
-          <MessageReactions messageId={message.id} relays={relays} />
+          <MessageReactions
+            messageId={message.id}
+            relays={relays}
+            adapter={adapter}
+            conversation={conversation}
+          />
           {canReply && onReply && !isRootMessage && (
             <button
               onClick={() => onReply(message.id)}
