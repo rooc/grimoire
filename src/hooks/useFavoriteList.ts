@@ -9,7 +9,7 @@ import { getSeenRelays } from "applesauce-core/helpers/relays";
 import { EventFactory } from "applesauce-core/event-factory";
 import eventStore from "@/services/event-store";
 import accountManager from "@/services/accounts";
-import settingsManager from "@/services/settings";
+import { settingsManager } from "@/services/settings";
 import { publishEvent } from "@/services/hub";
 import { useAccount } from "@/hooks/useAccount";
 import { isAddressableKind } from "@/lib/nostr-kinds";
