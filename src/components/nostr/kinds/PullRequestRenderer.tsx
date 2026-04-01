@@ -96,7 +96,7 @@ export function PullRequestRenderer({ event }: BaseEventProps) {
 
         {/* Labels */}
         {labels.length > 0 && (
-          <div className="flex items-center gap-1 overflow-x-scroll">
+          <div className="flex flex-wrap items-center gap-1">
             {labels.map((label, idx) => (
               <Label key={idx}>{label}</Label>
             ))}

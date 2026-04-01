@@ -81,7 +81,7 @@ export function IssueRenderer({ event }: BaseEventProps) {
 
         {/* Labels */}
         {labels.length > 0 && (
-          <div className="flex flex-wrap line-clamp-2 items-center gap-1 overflow-x-scroll mt-1">
+          <div className="flex flex-wrap line-clamp-2 items-center gap-1 mt-1">
             {labels.map((label, idx) => (
               <Label key={idx}>{label}</Label>
             ))}
