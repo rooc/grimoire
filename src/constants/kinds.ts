@@ -71,6 +71,7 @@ import {
   UserX,
   Video,
   Wallet,
+  Palette,
   WandSparkles,
   XCircle,
   Zap,
@@ -613,6 +614,14 @@ export const EVENT_KINDS: Record<number | string, EventKind> = {
   //   nip: "joinstr",
   //   icon: Coins,
   // },
+
+  3367: {
+    kind: 3367,
+    name: "Color Moment",
+    description: "Color Moment",
+    nip: "",
+    icon: Palette,
+  },
 
   // Community
   4550: {

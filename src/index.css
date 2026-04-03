@@ -399,7 +399,9 @@ body.animating-layout
   border-radius: 0 !important;
 }
 
-.mosaic.mosaic-blueprint-theme.mosaic-blueprint-theme .mosaic-window * {
+.mosaic.mosaic-blueprint-theme.mosaic-blueprint-theme
+  .mosaic-window
+  *:not(.color-palette-display) {
   border-radius: 0 !important;
 }
 
