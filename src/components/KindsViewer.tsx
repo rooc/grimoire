@@ -1,14 +1,18 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, X } from "lucide-react";
-import { getKindInfo } from "@/constants/kinds";
+import { Search, X, Sparkles } from "lucide-react";
+import { EVENT_KINDS, getKindInfo } from "@/constants/kinds";
 import { kindRenderers } from "./nostr/kinds";
 import { NIPBadge } from "./NIPBadge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CenteredContent } from "./ui/CenteredContent";
+import { useAddWindow } from "@/core/state";
 
-// Dynamically derive supported kinds from renderer registry
-const SUPPORTED_KINDS = Object.keys(kindRenderers).map(Number);
+// All known event kinds from the registry
+const ALL_KINDS = Object.keys(EVENT_KINDS).map(Number);
+
+// Kinds with rich rendering support
+const RICH_KINDS = new Set(Object.keys(kindRenderers).map(Number));
 
 /**
  * KindsViewer - System introspection command
@@ -17,6 +21,7 @@ const SUPPORTED_KINDS = Object.keys(kindRenderers).map(Number);
 export default function KindsViewer() {
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const addWindow = useAddWindow();
 
   // Autofocus on mount
   useEffect(() => {
@@ -24,7 +29,7 @@ export default function KindsViewer() {
   }, []);
 
   // Sort kinds in ascending order
-  const sortedKinds = [...SUPPORTED_KINDS].sort((a, b) => a - b);
+  const sortedKinds = [...ALL_KINDS].sort((a, b) => a - b);
 
   // Filter kinds by search term (matches kind number or name)
   const filteredKinds = search
@@ -61,11 +66,12 @@ export default function KindsViewer() {
         <h1 className="text-2xl font-bold mb-2">
           {search
             ? `Showing ${filteredKinds.length} of ${sortedKinds.length} Kinds`
-            : `Supported Event Kinds (${sortedKinds.length})`}
+            : `Known Event Kinds (${sortedKinds.length})`}
         </h1>
         <p className="text-sm text-muted-foreground mb-4">
-          Event kinds with rich rendering support in Grimoire. Default kinds
-          display raw content only.
+          All known Nostr event kinds. Kinds marked with{" "}
+          <Sparkles className="inline h-3.5 w-3.5 text-accent" /> have rich
+          rendering support in Grimoire.
         </p>
 
         {/* Search Input */}
@@ -101,6 +107,8 @@ export default function KindsViewer() {
             const kindInfo = getKindInfo(kind);
             const Icon = kindInfo?.icon;
 
+            const hasRichRenderer = RICH_KINDS.has(kind);
+
             return (
               <div
                 key={kind}
@@ -120,14 +128,22 @@ export default function KindsViewer() {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-1">
+                    <button
+                      className="flex items-center gap-2 mb-1 hover:underline cursor-crosshair"
+                      onClick={() =>
+                        addWindow("kind", { number: String(kind) })
+                      }
+                    >
                       <code className="text-sm font-mono font-semibold">
                         {kind}
                       </code>
                       <span className="text-sm font-semibold">
                         {kindInfo?.name || `Kind ${kind}`}
                       </span>
-                    </div>
+                      {hasRichRenderer && (
+                        <Sparkles className="h-3.5 w-3.5 text-accent flex-shrink-0" />
+                      )}
+                    </button>
                     <p className="text-sm text-muted-foreground mb-2">
                       {kindInfo?.description || "No description available"}
                     </p>

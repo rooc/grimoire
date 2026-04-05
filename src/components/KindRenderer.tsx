@@ -1,6 +1,7 @@
 import { getKindInfo } from "@/constants/kinds";
+import { kindRenderers } from "./nostr/kinds";
 import { NIPBadge } from "./NIPBadge";
-import { Copy, CopyCheck } from "lucide-react";
+import { Copy, CopyCheck, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { useCopy } from "@/hooks/useCopy";
 import {
@@ -95,6 +96,17 @@ export default function KindRenderer({ kind }: { kind: number }) {
             <NIPBadge nipNumber={kindInfo.nip} />
           </>
         )}
+        <div className="text-muted-foreground">Grimoire Support</div>
+        <div className="flex items-center gap-1.5">
+          {kind in kindRenderers ? (
+            <>
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              <span>Rich rendering</span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">Raw content only</span>
+          )}
+        </div>
       </div>
 
       {/* Schema Information */}
