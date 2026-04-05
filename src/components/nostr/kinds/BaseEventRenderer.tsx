@@ -176,6 +176,7 @@ function useEventActions(event: NostrEvent) {
         nip19.neventEncode({
           id: event.id,
           author: event.pubkey,
+          kind: event.kind,
           relays,
         }),
       );
@@ -209,16 +210,44 @@ function useEventActions(event: NostrEvent) {
   }, [event, addWindow]);
 
   const openChatWindow = useCallback(() => {
-    if (event.kind === 1) {
-      const seenRelaysSet = getSeenRelays(event);
-      const relays = seenRelaysSet ? Array.from(seenRelaysSet) : [];
+    const seenRelaysSet = getSeenRelays(event);
+    const relays = seenRelaysSet ? Array.from(seenRelaysSet) : [];
 
+    if (event.kind === 1) {
+      // Kind 1 → NIP-10 thread chat
       addWindow("chat", {
         protocol: "nip-10",
         identifier: {
           type: "thread",
           value: {
             id: event.id,
+            relays,
+            author: event.pubkey,
+            kind: event.kind,
+          },
+          relays,
+        },
+      });
+    } else {
+      // All other kinds → NIP-22 comment thread
+      const dTag = isAddressableKind(event.kind)
+        ? getTagValue(event, "d")
+        : undefined;
+
+      addWindow("chat", {
+        protocol: "nip-22",
+        identifier: {
+          type: "comment",
+          value: {
+            eventId: event.id,
+            address:
+              dTag !== undefined
+                ? {
+                    kind: event.kind,
+                    pubkey: event.pubkey,
+                    identifier: dTag,
+                  }
+                : undefined,
             relays,
             author: event.pubkey,
             kind: event.kind,
@@ -264,7 +293,6 @@ interface EventMenuItemsProps {
 function EventMenuItems({
   Item,
   Separator,
-  event,
   actions,
   onReactClick,
   canSign,
@@ -282,12 +310,10 @@ function EventMenuItems({
         <Zap className="size-4 mr-2 text-yellow-500" />
         Zap
       </Item>
-      {event.kind === 1 && (
-        <Item onClick={actions.openChatWindow}>
-          <MessageSquare className="size-4 mr-2" />
-          Chat
-        </Item>
-      )}
+      <Item onClick={actions.openChatWindow}>
+        <MessageSquare className="size-4 mr-2" />
+        Chat
+      </Item>
       {canSign && onReactClick && (
         <Item onClick={onReactClick}>
           <SmilePlus className="size-4 mr-2" />

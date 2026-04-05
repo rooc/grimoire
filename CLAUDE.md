@@ -327,6 +327,7 @@ This allows `applyTheme()` to switch themes at runtime.
 - **Styling**: Tailwind v4 + HSL CSS variables (theme tokens defined in `index.css`)
 - **Types**: Prefer types from `applesauce-core`, extend in `src/types/` when needed
 - **No Inline Imports**: Never use `import("module").Type` in type annotations. Always use top-level `import type` statements.
+- **nevent Encoding**: Always include `kind` (and `author`, `relays` when available) in `nip19.neventEncode()`. Kind metadata enables correct adapter dispatch (e.g., NIP-10 vs NIP-22) without needing to fetch the event first. Never encode a bare `{ id }` when kind is known.
 - **Locale-Aware Formatting** (`src/hooks/useLocale.ts`): All date, time, number, and currency formatting MUST use the user's locale:
   - **`useLocale()` hook**: Returns `{ locale, language, region, timezone, timeFormat }` - use in components that need locale config
   - **`formatTimestamp(timestamp, style)`**: Preferred utility for all timestamp formatting:

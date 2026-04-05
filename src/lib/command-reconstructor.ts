@@ -204,6 +204,69 @@ export function reconstructCommand(window: WindowInstance): string {
           }
         }
 
+        // NIP-22 comments: chat nevent1.../naddr1.../URL/#hashtag
+        if (protocol === "nip-22" && identifier.type === "comment") {
+          const val = identifier.value;
+          const relays = (identifier.relays || []).slice(0, 3);
+
+          // External root (URL, hashtag)
+          if (val.external) {
+            // Hashtags are stored as "#tag" (NIP-73 format)
+            // URLs and other identifiers are stored as-is
+            return `chat ${val.external}`;
+          }
+
+          // Address root (naddr)
+          if (val.address) {
+            try {
+              const naddr = nip19.naddrEncode({
+                kind: val.address.kind,
+                pubkey: val.address.pubkey,
+                identifier: val.address.identifier,
+                relays,
+              });
+              return `chat ${naddr}`;
+            } catch {
+              // Fallback
+            }
+          }
+
+          // Event root (nevent)
+          if (val.eventId) {
+            try {
+              const nevent = nip19.neventEncode({
+                id: val.eventId,
+                author: val.author,
+                kind: val.kind,
+                relays,
+              });
+              return `chat ${nevent}`;
+            } catch {
+              // Fallback
+            }
+          }
+        }
+
+        // NIP-10 threads: chat nevent1...
+        if (protocol === "nip-10" && identifier.type === "thread") {
+          const val = identifier.value;
+          const relays = (identifier.relays || []).slice(0, 3);
+
+          if (val.id) {
+            try {
+              const nevent = nip19.neventEncode({
+                id: val.id,
+                author: val.author,
+                kind: val.kind,
+                relays,
+              });
+              return `chat ${nevent}`;
+            } catch {
+              // Fallback
+            }
+          }
+        }
+
         return "chat";
       }
 

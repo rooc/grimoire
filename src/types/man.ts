@@ -578,12 +578,12 @@ export const manPages: Record<string, ManPageEntry> = {
     section: "1",
     synopsis: "chat <identifier>",
     description:
-      "Join and participate in Nostr chat conversations. Supports NIP-29 relay-based groups, NIP-53 live activity chat, and multi-room group list interface. For NIP-29 groups, use format 'relay'group-id' where relay is the WebSocket URL (wss:// prefix optional). For NIP-53 live activities, pass the naddr of a kind 30311 live event. For multi-room interface, pass the naddr of a kind 10009 group list event.",
+      "Join and participate in Nostr chat conversations. Supports NIP-29 relay-based groups, NIP-53 live activity chat, NIP-10 thread chat, NIP-22 comment threads on any event kind, and multi-room group list interface. NIP-22 comments work as a catch-all: any event that isn't kind 1 (NIP-10) or a relay group/live activity gets a comment thread. You can also comment on URLs and hashtags.",
     options: [
       {
         flag: "<identifier>",
         description:
-          "NIP-29 group (relay'group-id), NIP-53 live activity (naddr1... kind 30311), or group list (naddr1... kind 10009)",
+          "NIP-29 group (relay'group-id), NIP-53 live activity (naddr1...), NIP-10 thread (nevent1.../note1... kind 1), NIP-22 comments (nevent1.../naddr1... any other kind, URL, or #hashtag)",
       },
     ],
     examples: [
@@ -591,12 +591,17 @@ export const manPages: Record<string, ManPageEntry> = {
       "chat wss://nos.lol'welcome                Join NIP-29 group with explicit protocol",
       "chat naddr1...30311...                    Join NIP-53 live activity chat",
       "chat naddr1...10009...                    Open multi-room group list interface",
+      "chat nevent1...                           Comment on any event (NIP-22)",
+      "chat naddr1...30023...                    Comment on article (NIP-22)",
+      "chat https://example.com/post             Comment on URL (NIP-22)",
+      "chat #bitcoin                             Comment on hashtag (NIP-22)",
+      "chat iso3166:ES                            Comment on country/region (NIP-22, uppercase code)",
     ],
     seeAlso: ["profile", "open", "req", "live"],
     appId: "chat",
     category: "Nostr",
     argParser: async (args: string[]) => {
-      const result = parseChatCommand(args);
+      const result = await parseChatCommand(args);
       return {
         protocol: result.protocol,
         identifier: result.identifier,

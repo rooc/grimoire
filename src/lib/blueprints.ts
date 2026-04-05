@@ -37,6 +37,11 @@ import {
   setReaction,
   setReactionParent,
 } from "applesauce-common/operations/reaction";
+import { setParent as setCommentParent } from "applesauce-common/operations/comment";
+import {
+  COMMENT_KIND,
+  type CommentPointer,
+} from "applesauce-common/helpers/comment";
 import {
   GROUP_MESSAGE_KIND,
   type GroupPointer,
@@ -177,5 +182,26 @@ export function ReactionBlueprint(
     ),
     setReactionParent(event),
     typeof emoji !== "string" ? includeEmojisWithAddress([emoji]) : undefined,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CommentBlueprint (NIP-22 kind 1111)
+// ---------------------------------------------------------------------------
+
+export type CommentBlueprintOptions = TextContentOptionsWithAddress &
+  MetaTagOptions;
+
+export function CommentBlueprint(
+  parent: NostrEvent | CommentPointer,
+  content: string,
+  options?: CommentBlueprintOptions,
+) {
+  return blueprint(
+    COMMENT_KIND,
+    setCommentParent(parent),
+    setShortTextContent(content, { ...options, emojis: undefined }),
+    options?.emojis ? includeEmojisWithAddress(options.emojis) : undefined,
+    setMetaTags(options),
   );
 }

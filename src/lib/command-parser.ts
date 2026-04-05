@@ -32,8 +32,21 @@ export function parseCommandInput(input: string): ParsedCommand {
   const rawTokens = parseShellTokens(escapedInput);
 
   // Convert tokens to strings and restore $ characters
+  // shell-quote returns { comment: 'text' } for #text — preserve as #text
   const tokens = rawTokens.map((token) => {
-    const str = typeof token === "string" ? token : String(token);
+    let str: string;
+    if (typeof token === "string") {
+      str = token;
+    } else if (
+      token &&
+      typeof token === "object" &&
+      "comment" in token &&
+      typeof token.comment === "string"
+    ) {
+      str = `#${token.comment}`;
+    } else {
+      str = String(token);
+    }
     return str.replace(new RegExp(DOLLAR_PLACEHOLDER, "g"), "$");
   });
 

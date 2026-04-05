@@ -22,8 +22,12 @@ import {
 } from "applesauce-core/helpers";
 import { selectOptimalRelays } from "applesauce-core/helpers";
 import { addressLoader, AGGREGATOR_RELAYS } from "./loaders";
+import { parseReplaceableAddress } from "applesauce-core/helpers/pointers";
+import { getRepositoryRelays } from "@/lib/nip34-helpers";
 import { normalizeRelayURL } from "@/lib/relay-url";
 import liveness from "./relay-liveness";
+import eventStore from "./event-store";
+import accountManager from "./accounts";
 import relayListCache from "./relay-list-cache";
 import type {
   RelaySelectionResult,
@@ -651,6 +655,107 @@ export async function selectRelaysForInteraction(
   if (relays.length === 0) {
     return AGGREGATOR_RELAYS.slice(0, MAX_INTERACTION_RELAYS);
   }
+
+  return relays;
+}
+
+// ---------------------------------------------------------------------------
+// NIP-22 Comment Thread Relay Selection
+// ---------------------------------------------------------------------------
+
+/** NIP-34 git event kinds that use repo relays */
+const NIP34_KINDS = [
+  1617, 1618, 1619, 1621, 1622, 1630, 1631, 1632, 1633, 30617, 30618,
+];
+
+/**
+ * Select relays for a NIP-22 comment thread.
+ * Combines kind-specific relays, root author outbox, active user outbox, and hints.
+ *
+ * @param rootEvent - The root event being commented on (null for external roots)
+ * @param rootKind - The kind number of the root (null for external roots)
+ * @param relayHints - Relay hints from identifier encoding
+ * @returns Deduplicated relay URLs (max 10)
+ */
+export async function selectRelaysForCommentThread(
+  rootEvent: NostrEvent | null,
+  rootKind: number | null,
+  relayHints: string[],
+): Promise<string[]> {
+  const relaySets: string[][] = [relayHints];
+
+  // 1. Kind-specific relays
+  if (rootKind !== null && rootEvent) {
+    const kindRelays = await getRelaysByEventKind(rootKind, rootEvent);
+    relaySets.push(kindRelays);
+  }
+
+  // 2. Root author outbox
+  if (rootEvent) {
+    const outbox = await getOutboxRelaysForPubkey(eventStore, rootEvent.pubkey);
+    relaySets.push(outbox.slice(0, 3));
+  }
+
+  // 3. Active user outbox (for publishing)
+  const activePubkey = accountManager.active$.value?.pubkey;
+  if (activePubkey) {
+    const userOutbox = await getOutboxRelaysForPubkey(eventStore, activePubkey);
+    relaySets.push(userOutbox.slice(0, 2));
+  }
+
+  // Merge + fallback
+  let relays = mergeRelaySets(...relaySets);
+  if (relays.length < 3) {
+    relays = mergeRelaySets(relays, AGGREGATOR_RELAYS);
+  }
+  return relays.slice(0, 10);
+}
+
+/**
+ * Kind-specific relay resolution.
+ * Returns additional relays based on the event kind.
+ * Extensible — add new cases as protocols evolve.
+ */
+async function getRelaysByEventKind(
+  kind: number,
+  event: NostrEvent,
+): Promise<string[]> {
+  // NIP-34 git events: repo relays + OP's inbox (read) relays
+  if (NIP34_KINDS.includes(kind)) {
+    return getNip34CommentRelays(event);
+  }
+
+  // Future: add more kind-specific relay strategies here
+  return [];
+}
+
+/**
+ * NIP-34: repo relays (from kind 30617 "relays" tag) + OP's inbox relays
+ */
+async function getNip34CommentRelays(event: NostrEvent): Promise<string[]> {
+  const relays: string[] = [];
+
+  // 1. Repo relays from repository event's "relays" tag
+  const repoATag = event.tags.find(
+    (t) => t[0] === "a" && t[1]?.startsWith("30617:"),
+  );
+  if (repoATag && repoATag[1]) {
+    const address = parseReplaceableAddress(repoATag[1]);
+    if (address) {
+      const repoEvent = eventStore.getReplaceable(
+        address.kind,
+        address.pubkey,
+        address.identifier,
+      ) as NostrEvent | undefined;
+      if (repoEvent) {
+        relays.push(...getRepositoryRelays(repoEvent));
+      }
+    }
+  }
+
+  // 2. OP's inbox (read) relays
+  const opInbox = await getInboxRelaysForPubkey(eventStore, event.pubkey);
+  relays.push(...opInbox.slice(0, 3));
 
   return relays;
 }

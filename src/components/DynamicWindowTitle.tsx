@@ -153,7 +153,12 @@ function generateRawCommand(appId: string, props: any): string {
       if (props.pointer) {
         try {
           if ("id" in props.pointer) {
-            const nevent = nip19.neventEncode({ id: props.pointer.id });
+            const nevent = nip19.neventEncode({
+              id: props.pointer.id,
+              kind: props.pointer.kind,
+              author: props.pointer.author,
+              relays: props.pointer.relays,
+            });
             return `open ${nevent}`;
           } else if ("kind" in props.pointer && "pubkey" in props.pointer) {
             const naddr = nip19.naddrEncode({
@@ -282,7 +287,12 @@ function generateRawCommand(appId: string, props: any): string {
           let result = `zap ${npub}`;
           if (props.eventPointer) {
             if ("id" in props.eventPointer) {
-              const nevent = nip19.neventEncode({ id: props.eventPointer.id });
+              const nevent = nip19.neventEncode({
+                id: props.eventPointer.id,
+                kind: props.eventPointer.kind,
+                author: props.eventPointer.author,
+                relays: props.eventPointer.relays,
+              });
               result += ` ${nevent}`;
             } else if (
               "kind" in props.eventPointer &&

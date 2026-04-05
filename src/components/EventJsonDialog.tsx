@@ -50,6 +50,7 @@ export function EventJsonDialog({
       : nip19.neventEncode({
           id: event.id,
           author: event.pubkey,
+          kind: event.kind,
           relays,
         });
   }, [event]);

@@ -12,6 +12,7 @@ import {
   Copy,
   CopyCheck,
   FileText,
+  MessageSquare,
 } from "lucide-react";
 import { nip19 } from "nostr-tools";
 import type { EventPointer, AddressPointer } from "nostr-tools/nip19";
@@ -27,6 +28,7 @@ import type {
 } from "@/types/chat";
 import { CHAT_KINDS } from "@/types/chat";
 import { Nip10Adapter } from "@/lib/chat/adapters/nip-10-adapter";
+import { Nip22Adapter } from "@/lib/chat/adapters/nip-22-adapter";
 import { Nip29Adapter } from "@/lib/chat/adapters/nip-29-adapter";
 import { Nip53Adapter } from "@/lib/chat/adapters/nip-53-adapter";
 import type { ChatProtocolAdapter } from "@/lib/chat/adapters/base-adapter";
@@ -60,7 +62,16 @@ import { useProfileSearch } from "@/hooks/useProfileSearch";
 import { useEmojiSearch } from "@/hooks/useEmojiSearch";
 import { useCopy } from "@/hooks/useCopy";
 import { useAccount } from "@/hooks/useAccount";
+import { useLocale } from "@/hooks/useLocale";
 import { Label } from "./ui/label";
+import { KindRenderer } from "./nostr/kinds";
+import {
+  getExternalIdentifierIcon,
+  getExternalIdentifierLabel,
+  getExternalIdentifierHref,
+  getLocalizedRegionName,
+  regionToEmoji,
+} from "@/lib/nip73-helpers";
 import {
   Tooltip,
   TooltipContent,
@@ -157,6 +168,14 @@ function getConversationRelays(conversation: Conversation): string[] {
     }
   }
 
+  // NIP-22 comments and NIP-10 threads: Use relays from metadata
+  if (
+    conversation.protocol === "nip-22" ||
+    conversation.protocol === "nip-10"
+  ) {
+    return conversation.metadata?.relays || [];
+  }
+
   // NIP-29 groups and fallback: Use single relay URL
   const relayUrl = conversation.metadata?.relayUrl;
   return relayUrl ? [relayUrl] : [];
@@ -194,6 +213,37 @@ function getChatIdentifier(conversation: Conversation): string | null {
       identifier: activityAddress.identifier,
       relays: relays.slice(0, 3), // Limit relay hints to keep naddr short
     });
+  }
+
+  if (conversation.protocol === "nip-22") {
+    const meta = conversation.metadata;
+    const relays = (meta?.relays || []).slice(0, 3);
+
+    if (meta?.commentRootType === "external" && meta?.commentRootExternal) {
+      return meta.commentRootExternal;
+    }
+
+    if (meta?.commentRootType === "address" && meta?.commentRootAddress) {
+      return nip19.naddrEncode({
+        kind: meta.commentRootAddress.kind,
+        pubkey: meta.commentRootAddress.pubkey,
+        identifier: meta.commentRootAddress.identifier,
+        relays,
+      });
+    }
+
+    if (meta?.commentRootEventId) {
+      const kind = meta.commentRootKind
+        ? parseInt(meta.commentRootKind, 10)
+        : undefined;
+      return nip19.neventEncode({
+        id: meta.commentRootEventId,
+        kind: Number.isFinite(kind) ? kind : undefined,
+        relays,
+      });
+    }
+
+    return null;
   }
 
   return null;
@@ -609,6 +659,12 @@ export function ChatViewer({
       ? conversationResult.conversation
       : null;
 
+  // Relays for this conversation (used for reactions on root post, etc.)
+  const conversationRelays = useMemo(
+    () => (conversation ? getConversationRelays(conversation) : []),
+    [conversation],
+  );
+
   // Slash command search for action autocomplete
   // Context-aware: only shows relevant actions based on membership status
   const searchCommands = useCallback(
@@ -649,8 +705,20 @@ export function ChatViewer({
   const messagesWithMarkers = useMemo(() => {
     if (!messages || messages.length === 0) return [];
 
+    // For NIP-22, ensure root event is always first regardless of timestamp
+    let orderedMessages = messages;
+    const nip22RootId =
+      protocol === "nip-22"
+        ? conversation?.metadata?.commentRootEventId
+        : undefined;
+    if (nip22RootId) {
+      const rootMsg = messages.find((m) => m.id === nip22RootId);
+      const rest = messages.filter((m) => m.id !== nip22RootId);
+      orderedMessages = rootMsg ? [rootMsg, ...rest] : rest;
+    }
+
     // First, group consecutive system messages
-    const groupedMessages = groupSystemMessages(messages);
+    const groupedMessages = groupSystemMessages(orderedMessages);
 
     const items: Array<
       | { type: "message"; data: Message }
@@ -664,7 +732,14 @@ export function ChatViewer({
         : item.timestamp;
 
       // Add day marker if this is the first message or if day changed
-      if (index === 0) {
+      // For NIP-22: skip marker before root (index 0), but always add one
+      // before the first comment (index 1) to separate it from the root
+      const isNip22Root =
+        nip22RootId && !isGroupedSystemMessage(item) && item.id === nip22RootId;
+      if (isNip22Root) {
+        // No day marker before root — KindRenderer shows its own timestamp
+      } else if (index === 0 || (nip22RootId && index === 1)) {
+        // First message (or first comment after NIP-22 root)
         items.push({
           type: "day-marker",
           data: formatDayMarker(timestamp),
@@ -693,7 +768,7 @@ export function ChatViewer({
     });
 
     return items;
-  }, [messages]);
+  }, [messages, protocol, conversation?.metadata?.commentRootEventId]);
 
   // Track reply context (which message is being replied to)
   const [replyTo, setReplyTo] = useState<string | undefined>();
@@ -874,6 +949,8 @@ export function ChatViewer({
   const handleNipClick = useCallback(() => {
     if (conversation?.protocol === "nip-10") {
       addWindow("nip", { number: 10 });
+    } else if (conversation?.protocol === "nip-22") {
+      addWindow("nip", { number: 22 });
     } else if (conversation?.protocol === "nip-29") {
       addWindow("nip", { number: 29 });
     } else if (conversation?.protocol === "nip-53") {
@@ -888,23 +965,28 @@ export function ChatViewer({
     ? conversation?.metadata?.liveActivity
     : undefined;
 
-  // Derive participants from messages for live activities and NIP-10 threads
+  // Derive participants from messages for live activities, NIP-10 threads, and NIP-22 comments
   const derivedParticipants = useMemo(() => {
-    // NIP-10 threads: derive from messages with OP first
-    if (protocol === "nip-10" && messages && conversation) {
-      const rootAuthor = conversation.metadata?.rootEventId
-        ? messages.find((m) => m.id === conversation.metadata?.rootEventId)
-            ?.author
+    // NIP-10 threads and NIP-22 comments: derive from messages with OP first
+    if (
+      (protocol === "nip-10" || protocol === "nip-22") &&
+      messages &&
+      conversation
+    ) {
+      const rootId =
+        protocol === "nip-10"
+          ? conversation.metadata?.rootEventId
+          : conversation.metadata?.commentRootEventId;
+      const rootAuthor = rootId
+        ? messages.find((m) => m.id === rootId)?.author
         : undefined;
 
       const participants: { pubkey: string; role: "op" | "member" }[] = [];
 
-      // OP (root author) always first
       if (rootAuthor) {
         participants.push({ pubkey: rootAuthor, role: "op" });
       }
 
-      // Add other participants from messages (excluding OP)
       const seen = new Set(rootAuthor ? [rootAuthor] : []);
       for (const msg of messages) {
         if (msg.type !== "system" && !seen.has(msg.author)) {
@@ -945,6 +1027,7 @@ export function ChatViewer({
     conversation?.type,
     conversation?.participants,
     conversation?.metadata?.rootEventId,
+    conversation?.metadata?.commentRootEventId,
     messages,
     liveActivity?.hostPubkey,
   ]);
@@ -1031,26 +1114,25 @@ export function ChatViewer({
                     )}
                     {/* Protocol Type - Clickable */}
                     <div className="flex items-center gap-1.5 text-xs">
-                      {(conversation.type === "group" ||
-                        conversation.type === "live-chat") && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleNipClick();
-                          }}
-                          className="rounded bg-tooltip-foreground/20 px-1.5 py-0.5 font-mono hover:bg-tooltip-foreground/30 transition-colors cursor-pointer"
-                        >
-                          {conversation.protocol.toUpperCase()}
-                        </button>
-                      )}
-                      {(conversation.type === "group" ||
-                        conversation.type === "live-chat") && (
-                        <span className="opacity-60">•</span>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNipClick();
+                        }}
+                        className="rounded bg-tooltip-foreground/20 px-1.5 py-0.5 font-mono hover:bg-tooltip-foreground/30 transition-colors cursor-pointer"
+                      >
+                        {conversation.protocol.toUpperCase()}
+                      </button>
+                      <span className="opacity-60">•</span>
                       {conversation.protocol === "nip-10" ? (
                         <span className="flex items-center gap-1 opacity-80">
                           <FileText className="size-3" />
                           Thread
+                        </span>
+                      ) : conversation.protocol === "nip-22" ? (
+                        <span className="flex items-center gap-1 opacity-80">
+                          <MessageSquare className="size-3" />
+                          Comments
                         </span>
                       ) : (
                         <span className="capitalize opacity-80">
@@ -1100,15 +1182,12 @@ export function ChatViewer({
           <div className="flex items-center gap-2 text-xs text-muted-foreground p-1">
             <MembersDropdown participants={derivedParticipants} />
             <RelaysDropdown conversation={conversation} />
-            {(conversation.type === "group" ||
-              conversation.type === "live-chat") && (
-              <button
-                onClick={handleNipClick}
-                className="rounded bg-muted px-1.5 py-0.5 font-mono hover:bg-muted/80 transition-colors cursor-pointer"
-              >
-                {conversation.protocol.toUpperCase()}
-              </button>
-            )}
+            <button
+              onClick={handleNipClick}
+              className="rounded bg-muted px-1.5 py-0.5 font-mono hover:bg-muted/80 transition-colors cursor-pointer"
+            >
+              {conversation.protocol.toUpperCase()}
+            </button>
           </div>
         </div>
       </div>
@@ -1130,28 +1209,51 @@ export function ChatViewer({
             }}
             alignToBottom
             components={{
-              Header: () =>
-                hasMore &&
-                conversationResult.status === "success" &&
-                protocol !== "nip-10" ? (
-                  <div className="flex justify-center py-2">
-                    <Button
-                      onClick={handleLoadOlder}
-                      disabled={isLoadingOlder}
-                      variant="ghost"
-                      size="sm"
-                    >
-                      {isLoadingOlder ? (
-                        <>
-                          <Loader2 className="size-3 animate-spin" />
-                          <span className="text-xs">Loading...</span>
-                        </>
-                      ) : (
-                        "Load older messages"
-                      )}
-                    </Button>
-                  </div>
-                ) : null,
+              Header: () => {
+                // NIP-22 external root header (hashtag, URL, country, etc.)
+                if (
+                  protocol === "nip-22" &&
+                  conversation.metadata?.commentRootType === "external" &&
+                  conversation.metadata?.commentRootExternal
+                ) {
+                  return (
+                    <ExternalRootHeader
+                      external={conversation.metadata.commentRootExternal}
+                      kValue={conversation.metadata.commentRootKind || "web"}
+                    />
+                  );
+                }
+
+                // "Load older" for protocols that support it
+                if (
+                  hasMore &&
+                  conversationResult.status === "success" &&
+                  protocol !== "nip-10" &&
+                  protocol !== "nip-22"
+                ) {
+                  return (
+                    <div className="flex justify-center py-2">
+                      <Button
+                        onClick={handleLoadOlder}
+                        disabled={isLoadingOlder}
+                        variant="ghost"
+                        size="sm"
+                      >
+                        {isLoadingOlder ? (
+                          <>
+                            <Loader2 className="size-3 animate-spin" />
+                            <span className="text-xs">Loading...</span>
+                          </>
+                        ) : (
+                          "Load older messages"
+                        )}
+                      </Button>
+                    </div>
+                  );
+                }
+
+                return null;
+              },
               Footer: () => <div className="h-1" />,
             }}
             itemContent={(_index, item) => {
@@ -1181,6 +1283,28 @@ export function ChatViewer({
               const isRootMessage =
                 protocol === "nip-10" &&
                 conversation.metadata?.rootEventId === item.data.id;
+
+              // NIP-22 root: render with feed KindRenderer (no border)
+              const isNip22Root =
+                protocol === "nip-22" &&
+                item.data.id === conversation.metadata?.commentRootEventId;
+              if (isNip22Root && item.data.event) {
+                return (
+                  <div key={item.data.id}>
+                    <div className="[&>*]:border-b-0">
+                      <KindRenderer event={item.data.event} />
+                    </div>
+                    <div className="px-3 pb-2">
+                      <MessageReactions
+                        messageId={item.data.id}
+                        relays={conversationRelays}
+                        adapter={adapter}
+                        conversation={conversation}
+                      />
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <MessageItem
@@ -1290,6 +1414,57 @@ export function ChatViewer({
 }
 
 /**
+ * External root header for NIP-22 comment threads on external identifiers.
+ */
+function ExternalRootHeader({
+  external,
+  kValue,
+}: {
+  external: string;
+  kValue: string;
+}) {
+  const { locale: userLocale } = useLocale();
+
+  // ISO 3166 — locale-aware country/region name with emoji flag
+  if (kValue === "iso3166" || external.startsWith("iso3166:")) {
+    const code = external.startsWith("iso3166:")
+      ? external.slice(8).toUpperCase()
+      : external.toUpperCase();
+
+    return (
+      <div className="flex items-center gap-2 px-4 py-3">
+        <span className="text-2xl flex-shrink-0">{regionToEmoji(code)}</span>
+        <span className="text-sm font-medium truncate">
+          {getLocalizedRegionName(code, userLocale)}
+        </span>
+      </div>
+    );
+  }
+
+  const Icon = getExternalIdentifierIcon(kValue);
+  const label = getExternalIdentifierLabel(external, kValue);
+  const href = getExternalIdentifierHref(external);
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-3">
+      <Icon className="size-5 text-muted-foreground flex-shrink-0" />
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium hover:underline truncate"
+        >
+          {label}
+        </a>
+      ) : (
+        <span className="text-sm font-medium truncate">{label}</span>
+      )}
+    </div>
+  );
+}
+
+/**
  * Get the appropriate adapter for a protocol
  * Currently NIP-10 (thread chat), NIP-29 (relay-based groups) and NIP-53 (live activity chat) are supported
  * Other protocols will be enabled in future phases
@@ -1298,6 +1473,8 @@ function getAdapter(protocol: ChatProtocol): ChatProtocolAdapter {
   switch (protocol) {
     case "nip-10":
       return new Nip10Adapter();
+    case "nip-22":
+      return new Nip22Adapter();
     case "nip-29":
       return new Nip29Adapter();
     // case "nip-17":  // Phase 2 - Encrypted DMs (coming soon)

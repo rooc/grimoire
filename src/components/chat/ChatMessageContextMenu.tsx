@@ -115,6 +115,7 @@ export function ChatMessageContextMenu({
       const nevent = nip19.neventEncode({
         id: event.id,
         author: event.pubkey,
+        kind: event.kind,
         relays: relays,
       });
       copy(nevent);

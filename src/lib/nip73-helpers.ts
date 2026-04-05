@@ -35,7 +35,7 @@ export function getExternalIdentifierIcon(kValue: string): LucideIcon {
   if (kValue === "doi") return FileText;
   if (kValue === "geo") return MapPin;
   if (kValue === "iso3166") return Flag;
-  if (kValue === "#") return Hash;
+  if (kValue === "#" || kValue === "hashtag") return Hash;
   if (kValue === "isan") return Film;
   // Blockchain types: "bitcoin:tx", "ethereum:1:address", etc.
   if (kValue.includes(":tx") || kValue.includes(":address")) return Coins;
@@ -78,11 +78,17 @@ export function getExternalIdentifierLabel(
   // Geohash
   if (kValue === "geo") return `Location ${iValue}`;
 
-  // Country codes
-  if (kValue === "iso3166") return iValue.toUpperCase();
+  // ISO 3166 country/region codes
+  if (kValue === "iso3166" || iValue.startsWith("iso3166:")) {
+    const code = iValue.startsWith("iso3166:")
+      ? iValue.slice(8).toUpperCase()
+      : iValue.toUpperCase();
+    return getRegionDisplayName(code);
+  }
 
-  // Hashtag
-  if (iValue.startsWith("#")) return iValue;
+  // Hashtag (NIP-73 format: "#bitcoin" or legacy "hashtag:bitcoin")
+  if (kValue === "#" || iValue.startsWith("#")) return iValue;
+  if (iValue.startsWith("hashtag:")) return `#${iValue.slice(8)}`;
 
   // Blockchain
   if (iValue.includes(":tx:"))
@@ -150,10 +156,65 @@ export function getExternalTypeLabel(kValue: string): string {
   if (kValue === "isbn") return "Book";
   if (kValue === "doi") return "Paper";
   if (kValue === "geo") return "Location";
-  if (kValue === "iso3166") return "Country";
+  if (kValue === "iso3166") return "Country / Region";
   if (kValue === "#") return "Hashtag";
   if (kValue === "isan") return "Film";
   if (kValue.includes(":tx")) return "Transaction";
   if (kValue.includes(":address")) return "Address";
   return kValue;
+}
+
+/**
+ * Get a localized display name for an ISO 3166 region code.
+ * Uses Intl.DisplayNames for locale-aware country/region names.
+ * Supports ISO 3166-1 alpha-2 (ES, BY) and ISO 3166-2 subdivisions (ES-CT).
+ *
+ * Returns the emoji flag + localized name when possible, falls back to code.
+ */
+export function getRegionDisplayName(code: string): string {
+  const upper = code.toUpperCase();
+
+  // ISO 3166-2 subdivision (e.g., "ES-CT" for Catalonia)
+  if (upper.includes("-")) {
+    const countryCode = upper.split("-")[0];
+    const countryName = getLocalizedRegionName(countryCode);
+    const flag = regionToEmoji(countryCode);
+    return `${flag} ${countryName} — ${upper}`;
+  }
+
+  // ISO 3166-1 alpha-2 (e.g., "ES" for Spain)
+  const name = getLocalizedRegionName(upper);
+  const flag = regionToEmoji(upper);
+  return `${flag} ${name}`;
+}
+
+/**
+ * Get a localized region name using Intl.DisplayNames.
+ * Accepts an explicit locale string for React components using useLocale/useGrimoire.
+ */
+export function getLocalizedRegionName(code: string, locale?: string): string {
+  try {
+    const displayNames = new Intl.DisplayNames(locale || undefined, {
+      type: "region",
+    });
+    return displayNames.of(code.toUpperCase()) || code;
+  } catch {
+    return code;
+  }
+}
+
+/**
+ * Convert an ISO 3166-1 alpha-2 code to its emoji flag.
+ * Each letter maps to a Regional Indicator Symbol (U+1F1E6..U+1F1FF).
+ */
+export function regionToEmoji(code: string): string {
+  // Only works for 2-letter codes; subdivisions (ES-CT) use the country part
+  const twoLetter = code.includes("-") ? code.split("-")[0] : code;
+  if (twoLetter.length !== 2) return "";
+  const upper = twoLetter.toUpperCase();
+  const offset = 0x1f1e6 - 65; // 'A' = 65
+  return (
+    String.fromCodePoint(upper.charCodeAt(0) + offset) +
+    String.fromCodePoint(upper.charCodeAt(1) + offset)
+  );
 }

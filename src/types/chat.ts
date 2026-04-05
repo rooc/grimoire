@@ -10,17 +10,29 @@ export const CHAT_KINDS = [
   9321, // NIP-61: Nutzaps (ecash zaps in groups/live chats)
   1311, // NIP-53: Live chat messages
   9735, // NIP-57: Zap receipts (part of chat context)
+  1111, // NIP-22: Comments
 ] as const;
 
 /**
  * Chat protocol identifier
  */
-export type ChatProtocol = "nip-17" | "nip-28" | "nip-29" | "nip-53" | "nip-10";
+export type ChatProtocol =
+  | "nip-17"
+  | "nip-28"
+  | "nip-29"
+  | "nip-53"
+  | "nip-10"
+  | "nip-22";
 
 /**
  * Conversation type
  */
-export type ConversationType = "dm" | "channel" | "group" | "live-chat";
+export type ConversationType =
+  | "dm"
+  | "channel"
+  | "group"
+  | "live-chat"
+  | "comment-thread";
 
 /**
  * Participant role in a conversation
@@ -83,6 +95,13 @@ export interface ConversationMetadata {
   providedEventId?: string; // Original event from nevent (may be reply)
   threadDepth?: number; // Approximate depth of thread
   relays?: string[]; // Relays for this conversation
+
+  // NIP-22 comment thread
+  commentRootType?: "event" | "address" | "external";
+  commentRootEventId?: string;
+  commentRootAddress?: { kind: number; pubkey: string; identifier: string };
+  commentRootExternal?: string;
+  commentRootKind?: string; // K tag value ("30023", "web", "hashtag", etc.)
 }
 
 /**
@@ -230,6 +249,29 @@ export interface ThreadIdentifier {
 }
 
 /**
+ * NIP-22 comment identifier (catch-all for non-kind-1 events)
+ * Supports event roots, addressable event roots, and external identifier roots
+ */
+export interface CommentIdentifier {
+  type: "comment";
+  value: {
+    /** Event ID for event roots (nevent/note) */
+    eventId?: string;
+    /** Address pointer for addressable event roots (naddr) */
+    address?: { kind: number; pubkey: string; identifier: string };
+    /** External identifier for I-tag roots (URL, hashtag, podcast GUID, etc.) */
+    external?: string;
+    /** Relay hints */
+    relays?: string[];
+    /** Author pubkey hint */
+    author?: string;
+    /** Event kind hint (may be 1111 if opened from a comment) */
+    kind?: number;
+  };
+  relays?: string[];
+}
+
+/**
  * Protocol-specific identifier - discriminated union
  * Returned by adapter parseIdentifier()
  */
@@ -240,7 +282,8 @@ export type ProtocolIdentifier =
   | NIP05Identifier
   | ChannelIdentifier
   | GroupListIdentifier
-  | ThreadIdentifier;
+  | ThreadIdentifier
+  | CommentIdentifier;
 
 /**
  * Chat command parsing result

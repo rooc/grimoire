@@ -55,6 +55,7 @@ export function EventDetailViewer({ pointer }: EventDetailViewerProps) {
           id: event.id,
           relays: relays,
           author: event.pubkey,
+          kind: event.kind,
         })
       : nip19.naddrEncode({
           kind: event.kind,
