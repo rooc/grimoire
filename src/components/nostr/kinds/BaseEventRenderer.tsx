@@ -52,6 +52,8 @@ import {
   getFavoriteConfig,
   FALLBACK_FAVORITE_CONFIG,
 } from "@/config/favorite-lists";
+import { getPowDifficulty } from "@/lib/nip13-helpers";
+import { Label } from "@/components/ui/label";
 
 /**
  * Universal event properties and utilities shared across all kind renderers
@@ -489,6 +491,7 @@ export function BaseEventContainer({
   };
 }) {
   const { locale } = useGrimoire();
+  const addWindow = useAddWindow();
   const { canSign, signer, pubkey } = useAccount();
   const { settings } = useSettings();
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
@@ -526,6 +529,8 @@ export function BaseEventContainer({
     },
     [signer, pubkey, event],
   );
+
+  const powDifficulty = getPowDifficulty(event);
 
   const relativeTime = formatTimestamp(
     event.created_at,
@@ -568,6 +573,14 @@ export function BaseEventContainer({
               >
                 {relativeTime}
               </span>
+              {powDifficulty !== undefined && (
+                <Label
+                  className="text-[10px] tabular-nums cursor-crosshair hover:text-foreground"
+                  onClick={() => addWindow("nip", { number: 13 }, "NIP 13")}
+                >
+                  PoW {powDifficulty}
+                </Label>
+              )}
             </div>
             <EventMenu
               event={event}

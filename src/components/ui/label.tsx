@@ -9,15 +9,22 @@ interface LabelProps {
    * - md: px-3 py-1
    */
   size?: "sm" | "md";
+  onClick?: (e: React.MouseEvent) => void;
 }
 
 /**
  * Label/Badge component with dotted border styling
  * Used for tags, language indicators, and metadata labels
  */
-export function Label({ children, className, size = "sm" }: LabelProps) {
+export function Label({
+  children,
+  className,
+  size = "sm",
+  onClick,
+}: LabelProps) {
   return (
     <span
+      onClick={onClick}
       className={cn(
         "truncate line-clamp-1 border border-muted border-dotted text-muted-foreground text-xs",
         size === "sm" && "px-2 py-0.5",
